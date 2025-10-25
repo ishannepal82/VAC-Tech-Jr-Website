@@ -288,7 +288,7 @@ export default function AdminMembers() {
             </button>
             <button
               type="submit"
-              onClick={() => () =>
+              onClick={() =>
                 addMember(
                   name,
                   email,
@@ -297,7 +297,8 @@ export default function AdminMembers() {
                   committee,
                   is_admin,
                   memo_tokens
-                )}
+                )
+              }
               className="px-6 py-2 rounded-lg bg-[#2563eb] hover:bg-[#1d4ed8] text-white font-semibold transition"
             >
               Save Member
