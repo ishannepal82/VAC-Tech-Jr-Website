@@ -32,7 +32,11 @@ def register_user():
         user_ref.set({
             'email': email,
             'name': username,
-            'role': 'Visitor',
+            'role': 'president',
+            'rank': 'Hacker',
+            'points': 0,
+            'committee': 'HOD',
+            'memo_tokens': 0
         })
 
         return jsonify({'msg': 'User registered sucessfully'}), 201

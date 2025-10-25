@@ -16,6 +16,7 @@ def get_current_user():
             return None  # No token provided
         
         decoded_token = auth.verify_session_cookie(session_cookie, check_revoked=True)
+        print(decoded_token)
         user = {
             "uid": decoded_token['uid'],
             "email": decoded_token['email'],
