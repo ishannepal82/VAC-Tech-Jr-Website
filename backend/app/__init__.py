@@ -49,5 +49,8 @@ def create_app():
 
     from app.routes.services.manage_news import news_bp
     app.register_blueprint(news_bp, url_prefix='/api/news')
+
+    from app.routes.services.manage_users import users_bp
+    app.register_blueprint(users_bp, url_prefix='/api/users')
     
     return app

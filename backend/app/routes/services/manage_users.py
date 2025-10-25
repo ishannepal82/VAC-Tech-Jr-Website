@@ -23,7 +23,7 @@ def get_all_users():
 
     except Exception as e:
         return jsonify({'msg': 'Internal server error', 'error': str(e)}), 500
-@users_bp.route('/add_user', methods=['POST'])
+@users_bp.route('/add-user', methods=['POST'])
 def add_user():
     try:
         db = current_app.config['db']

@@ -10,12 +10,12 @@ def get_current_user():
     """
     try:
         # The cookie name your frontend sets (adjust if needed)
-        id_token = request.cookies.get('firebase_token')
-
-        if not id_token:
+        session_cookie = request.cookies.get('session')
+        print(session_cookie)
+        if not session_cookie:
             return None  # No token provided
         
-        decoded_token = auth.verify_id_token(id_token, check_revoked=True)
+        decoded_token = auth.verify_session_cookie(session_cookie, check_revoked=True)
         user = {
             "uid": decoded_token['uid'],
             "email": decoded_token['email'],
@@ -28,12 +28,6 @@ def get_current_user():
 
     except auth.ExpiredIdTokenError:
         print("⚠️ Token expired.")
-        return None
-    except auth.InvalidIdTokenError:
-        print("⚠️ Invalid token.")
-        return None
-    except auth.RevokedIdTokenError:
-        print("⚠️ Token has been revoked.")
         return None
     except Exception as e:
         print("⚠️ Error verifying token:", e)

@@ -1,9 +1,10 @@
-import { use, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { Sparkles, Info, Crown } from "lucide-react";
 import { InfoModal } from "./InfoModal";
 import { RanksTable, XpFormulaInfo } from "./RankSystem";
 import CountUp from "react-countup";
+import MemberRankBadge from "../../admin/components/MemberRankBadge";
 
 // --- TYPE DEFINITIONS ---
 type LegendMember = {
@@ -24,9 +25,17 @@ type InfoCardProps = {
   icon: ReactNode;
   title: string;
   description: string;
+  rank: any;
   onClick: () => void;
 };
-
+type rank = "Newbie" | "Explorer" | "Builder" | "Developer" | "Hacker";
+const getRank = (points: number): rank => {
+  if (points <= 100) return "Newbie";
+  if (points <= 300) return "Explorer";
+  if (points <= 600) return "Builder";
+  if (points <= 1000) return "Developer";
+  return "Hacker";
+};
 // --- REUSABLE COMPONENTS ---
 const PodiumMember = ({
   member,
@@ -66,10 +75,17 @@ const PodiumMember = ({
     <p className={`font-black text-xl ${medalColor}`}>
       <CountUp end={member.points} duration={3} />
     </p>
+    <MemberRankBadge rank={getRank(member.rank)} />
   </div>
 );
 
-const InfoCard = ({ icon, title, description, onClick }: InfoCardProps) => (
+const InfoCard = ({
+  icon,
+  title,
+  description,
+
+  onClick,
+}: InfoCardProps) => (
   <button onClick={onClick} className="w-full text-left h-full">
     <div className="bg-[#1a2f55] p-6 rounded-2xl h-full transition-colors duration-300 hover:bg-[#254272] cursor-pointer">
       <div className="flex items-center gap-3">
@@ -88,7 +104,7 @@ export default function WallOfLegends() {
   const [modalContent, setModalContent] = useState<"ranks" | "xp" | null>(null);
   const [podium, setPodium] = useState<LegendMember[]>([]);
   const [others, setOthers] = useState<LegendMember[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [_isLoading, setIsLoading] = useState<boolean>(true);
 
   const handleOpenModal = (title: string, content: "ranks" | "xp") => {
     setModalTitle(title);
@@ -124,7 +140,6 @@ export default function WallOfLegends() {
     handleFetchData();
     setIsLoading(false);
   }, []);
-
 
   return (
     <>
