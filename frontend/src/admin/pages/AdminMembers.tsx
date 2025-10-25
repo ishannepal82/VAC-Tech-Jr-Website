@@ -5,7 +5,7 @@ import Modal from "../components/Modal";
 import { useAdminData } from "../context/AdminDataContext";
 
 type Role = "Member" | "Head";
-type Committee = "None" | "PR" | "ECA" | "Coding" | "Graphics" | "Hod";
+type Committee = "None" | "PR" | "ECA" | "Coding" | "Graphics" | "Bod";
 type Rank = "Newbie" | "Explorer" | "Builder" | "Developer" | "Hacker";
 
 interface Member {
@@ -15,7 +15,7 @@ interface Member {
   points: number;
   role: Role;
   committee: Committee;
-  memoTokens: number;
+  memo_tokens: number;
 }
 
 const getRank = (points: number): Rank => {
@@ -40,6 +40,9 @@ export default function AdminMembers() {
   const [is_admin, setIsAdmin] = useState<boolean>(false);
   const [committee, setCommittee] = useState<Committee>("None");
   const [memo_tokens, setMemoTokens] = useState<number>(0);
+  // Near your other state declarations
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [memberToDelete, setMemberToDelete] = useState<string | null>(null);
 
   // ✅ Fetch members on mount
   useEffect(() => {
@@ -54,7 +57,15 @@ export default function AdminMembers() {
       setEmail(member.email);
       setRole(member.role);
       setCommittee(member.committee);
-      setMemoTokens(member.memoTokens);
+      setMemoTokens(member.memo_tokens);
+    } else {
+      setName("");
+      setEmail("");
+      setPassword("");
+      setCommittee("None");
+      setMemoTokens(0);
+      setRole("Member");
+      setIsAdmin(false);
     }
   };
 
@@ -85,11 +96,27 @@ export default function AdminMembers() {
     handleCloseModal();
   };
 
-  const handleDelete = async (id: any) => {
-    window.confirm("Are you sure you want to delete this member?");
-    await deleteMember(id); // refresh list after deleting
+  // This function opens the confirmation modal
+  const handleDeleteClick = (id: string) => {
+    setMemberToDelete(id);
+    setIsDeleteModalOpen(true);
   };
 
+  // This function runs when the user confirms the deletion
+  const confirmDelete = async () => {
+    if (memberToDelete) {
+      await deleteMember(memberToDelete);
+      // No need to call getMembers() if deleteMember already updates the state in your context
+    }
+    // Close the modal and reset the state
+    setIsDeleteModalOpen(false);
+    setMemberToDelete(null);
+  };
+
+  const cancelDelete = () => {
+    setIsDeleteModalOpen(false);
+    setMemberToDelete(null);
+  };
   const filteredMembers = useMemo(() => {
     return members
       .filter((member) => {
@@ -159,7 +186,7 @@ export default function AdminMembers() {
               <option value="ECA">ECA</option>
               <option value="Coding">Coding</option>
               <option value="Graphics">Graphics</option>
-              <option value="Hod">HOD</option>
+              <option value="Bod">BOD</option>
               <option value="None">None</option>
             </select>
           </div>
@@ -172,7 +199,6 @@ export default function AdminMembers() {
           </button>
         </div>
       </div>
-
       {/* Members table */}
       <div className="overflow-x-auto">
         <table className="w-full text-sm text-left text-gray-300">
@@ -196,7 +222,7 @@ export default function AdminMembers() {
                 <td className="px-6 py-4 font-medium text-white">
                   {member.name}
                 </td>
-                <td className="px-6 py-4">{member.email}</td>
+                <td className="px-6 py-4">{member?.email}</td>
                 <td className="px-6 py-4 font-bold">{member.points}</td>
                 <td className="px-6 py-4">
                   <MemberRankBadge rank={getRank(member.points)} />
@@ -209,7 +235,7 @@ export default function AdminMembers() {
                   </button>
                   <button
                     className="text-red-400 hover:text-red-300"
-                    onClick={() => handleDelete(member.id)}
+                    onClick={() => handleDeleteClick(member.id!)} // <-- new function
                   >
                     <Trash2 size={18} />
                   </button>
@@ -219,7 +245,6 @@ export default function AdminMembers() {
           </tbody>
         </table>
       </div>
-
       {/* Modal */}
       <Modal
         isOpen={isModalOpen}
@@ -266,7 +291,7 @@ export default function AdminMembers() {
               <option value="ECA">ECA</option>
               <option value="Coding">Coding</option>
               <option value="Graphics">Graphics</option>
-              <option value="Hod">HOD</option>
+              <option value="Bod">BOD</option>
             </select>
 
             <input
@@ -307,23 +332,41 @@ export default function AdminMembers() {
             </button>
             <button
               type="submit"
-              onClick={() =>
-                addMember(
-                  name,
-                  email,
-                  password,
-                  role,
-                  committee,
-                  is_admin,
-                  memo_tokens
-                )
-              }
               className="px-6 py-2 rounded-lg bg-[#2563eb] hover:bg-[#1d4ed8] text-white font-semibold transition"
             >
               Save Member
             </button>
           </div>
         </form>
+      </Modal>
+
+      <Modal
+        isOpen={isDeleteModalOpen}
+        onClose={cancelDelete}
+        title="Confirm Deletion"
+      >
+        <div className="text-gray-300">
+          <p>Are you sure you want to permanently delete this member?</p>
+          <p className="mt-2 text-sm text-gray-400">
+            This action cannot be undone.
+          </p>
+        </div>
+        <div className="flex justify-end gap-4 pt-6">
+          <button
+            type="button"
+            onClick={cancelDelete}
+            className="px-6 py-2 rounded-lg text-gray-300 hover:bg-gray-600 transition"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={confirmDelete}
+            className="px-6 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white font-semibold transition"
+          >
+            Delete Member
+          </button>
+        </div>
       </Modal>
     </div>
   );

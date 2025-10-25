@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { toast } from "react-hot-toast";
 
 type Role = "Member" | "Head";
-type Committee = "None" | "PR" | "ECA" | "Coding" | "Graphics" | "Hod";
+type Committee = "None" | "PR" | "ECA" | "Coding" | "Graphics" | "Bod";
 
 interface Member {
   id?: string;
@@ -12,7 +12,7 @@ interface Member {
   points: number;
   role: Role;
   committee: Committee;
-  memoTokens: number;
+  memo_tokens: number;
 }
 
 interface AdminDataContextType {
@@ -77,7 +77,7 @@ export const AdminDataProvider = ({ children }: { children: ReactNode }) => {
           points: 0,
           role,
           committee,
-          memoTokens: memo_tokens,
+          memo_tokens: memo_tokens,
         },
       ]);
 

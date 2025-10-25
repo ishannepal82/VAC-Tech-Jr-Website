@@ -21,7 +21,6 @@ def get_current_user():
             "uid": decoded_token['uid'],
             "email": decoded_token['email'],
             "name": decoded_token['name'],
-            "role": decoded_token['role'],
             "is_admin": decoded_token['is_admin']
         }
 

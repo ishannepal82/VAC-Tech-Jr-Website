@@ -11,7 +11,7 @@ def get_all_users():
 
         user = get_current_user()
         if not user:
-            return jsonify({'msg': 'Unauthorized User'}), 401
+            return jsonify({'msg': 'Unauthorized User'}), 400
         
         users_ref = db.collection('Users')
         users = [doc.to_dict() | {"id": doc.id} for doc in users_ref.stream()]
@@ -48,15 +48,18 @@ def add_user():
         )
 
         uid = user.uid
-        auth.set_custom_user_claims(uid, {'role':data.get('role'), 'is_admin': data.get('is_admin', False)})
+        auth.set_custom_user_claims(uid, {'is_admin': data.get('is_admin', False)})
         
         users_ref = db.collection('Users').document(uid)
         users_ref.set({
-            'email': data.get('email'),
             'name': data.get('name'),
-            'commitee': data.get('comittee'),
             'memo_token': data.get('memo_token'),
             'points': 10,
+            'role': data.get('role'),
+            'commitee': data.get('commitee'),
+            'is_admin': data.get('is_admin', False),
+            'rank': 'Newbie',
+            'email': data.get('email')
         })
 
         return jsonify({
@@ -75,13 +78,13 @@ def edit_user(uid):
             return jsonify({'msg': 'Missing JSON data'}), 400
         
         updated_info = {}
-        updated_fields = ["email", "password", "commitee", "role", "name"]
+        updated_fields = ["email", "password", "commitee", "role", "name", "memo_tokens", "is_admin"]
         for field in updated_fields:
             if field in data:
                 updated_info[field] = data[field]
             
         user = get_current_user()
-        if not user or not user.is_admin:
+        if not user or not user['is_admin']:
             return jsonify({'msg': 'Unauthorized User'}), 401
         
         
@@ -95,11 +98,6 @@ def edit_user(uid):
     except Exception as e:
         return jsonify({'msg': 'Internal server error', 'error': str(e)}), 500
     
-@from flask import Blueprint, jsonify, current_app
-from firebase_admin import auth
-# Assume get_current_user is defined somewhere in your code
-
-users_bp = Blueprint('users', __name__)
 
 @users_bp.route('/delete-user/<uid>', methods=['DELETE'])
 def delete_user(uid):

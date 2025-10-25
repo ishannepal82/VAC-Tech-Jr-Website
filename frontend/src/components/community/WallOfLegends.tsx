@@ -25,7 +25,7 @@ type InfoCardProps = {
   icon: ReactNode;
   title: string;
   description: string;
-  rank: any;
+
   onClick: () => void;
 };
 type rank = "Newbie" | "Explorer" | "Builder" | "Developer" | "Hacker";
