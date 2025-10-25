@@ -32,13 +32,13 @@ def add_user():
         if not data:
             return jsonify({'msg': 'Missing JSON data'}), 400
         
-        required_fields = ["email", "password", "commitee", "role", "name"]
+        required_fields = ["email", "password", "committee", "role", "name"]
         for field in required_fields:
             if field not in data:
                 return jsonify({"error": f"Missing field: {field}"}), 400
         
         user = get_current_user()
-        if not user or not user.is_admin:
+        if not user or not user['is_admin']:
             return jsonify({'msg': 'Unauthorized User'}), 401
         
         user = auth.create_user(
@@ -54,8 +54,8 @@ def add_user():
         users_ref.set({
             'email': data.get('email'),
             'name': data.get('name'),
-            'commitee': data.get('commitee'),
-            'memo_token': 1,
+            'commitee': data.get('comittee'),
+            'memo_token': data.get('memo_token'),
             'points': 10,
         })
 
@@ -95,22 +95,33 @@ def edit_user(uid):
     except Exception as e:
         return jsonify({'msg': 'Internal server error', 'error': str(e)}), 500
     
+@from flask import Blueprint, jsonify, current_app
+from firebase_admin import auth
+# Assume get_current_user is defined somewhere in your code
+
+users_bp = Blueprint('users', __name__)
+
 @users_bp.route('/delete-user/<uid>', methods=['DELETE'])
 def delete_user(uid):
     try:
         db = current_app.config['db']
-            
+        
+        # Check if the requester is admin
         user = get_current_user()
-        if not user or not user.is_admin:
+        if not user or not user.get("is_admin", False):
             return jsonify({'msg': 'Unauthorized User'}), 401
         
-        
+        # Delete from Firestore
         users_ref = db.collection('Users').document(uid)
         users_ref.delete()
 
-        return jsonify({
-            'msg': 'Successfully deleted the user'
-        }), 200
+        # Delete from Firebase Auth
+        auth.delete_user(uid)
 
+        return jsonify({'msg': 'Successfully deleted the user'}), 200
+
+    except auth.AuthError as e:
+        # Handle Firebase Auth-specific errors
+        return jsonify({'msg': 'Failed to delete user from Firebase Auth', 'error': str(e)}), 500
     except Exception as e:
         return jsonify({'msg': 'Internal server error', 'error': str(e)}), 500
