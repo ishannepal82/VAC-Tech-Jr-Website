@@ -1,6 +1,7 @@
 import { createContext, useState, useContext } from "react";
 import type { ReactNode } from "react";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
+
 import { useNavigate } from "react-router-dom";
 
 type Role = "Member" | "Head";
@@ -47,31 +48,33 @@ const AdminDataContext = createContext<AdminDataContextType | undefined>(
 
 export const AdminDataProvider = ({ children }: { children: ReactNode }) => {
   const [members, setMembers] = useState<Member[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [_loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   // ✅ Common error handler for fetch calls
-const handleResponseError = async (res: Response, fallbackMsg: string) => {
-  let errorData: any = {};
-  try {
-    errorData = await res.json();
-  } catch {
-    errorData = { msg: fallbackMsg };
-  }
+  const handleResponseError = async (res: Response, fallbackMsg: string) => {
+    let errorData: any = {};
+    try {
+      errorData = await res.json();
+    } catch {
+      errorData = { msg: fallbackMsg };
+    }
 
-  setLoading(false);
+    setLoading(false);
 
-  if (res.status === 500) toast.error("Internal Server Error, Please try again!");
-  else if (res.status === 401) toast.error("Invalid Credentials, You are not authorized!");
-  else if (res.status === 404) toast.error("Requested resource not found!");
-  else if (res.status === 400) toast.error("Bad Request, Please check your input!");
-  else toast.error(errorData["msg"] || fallbackMsg);
+    if (res.status === 500)
+      toast.error("Internal Server Error, Please try again!");
+    else if (res.status === 401)
+      toast.error("Invalid Credentials, You are not authorized!");
+    else if (res.status === 404) toast.error("Requested resource not found!");
+    else if (res.status === 400)
+      toast.error("Bad Request, Please check your input!");
+    else if (res.status === 409) toast.error("Email already exists!");
+    else toast.error(errorData["msg"] || fallbackMsg);
 
-  console.error("❌ Backend Error:", errorData); // log instead of throw
-};
+    console.error("❌ Backend Error:", errorData);
+  };
 
-
-  // ✅ Add new member
   const addMember = async (
     name: string,
     email: string,
@@ -118,7 +121,9 @@ const handleResponseError = async (res: Response, fallbackMsg: string) => {
         credentials: "include",
       });
 
-      if (!res.ok) {await handleResponseError(res, "Failed to fetch users");}
+      if (!res.ok) {
+        await handleResponseError(res, "Failed to fetch users");
+      }
 
       const data = await res.json();
       const fetchedMembers: Member[] = data.users.map((u: any) => ({
@@ -148,7 +153,8 @@ const handleResponseError = async (res: Response, fallbackMsg: string) => {
         }
       );
 
-      if (!res.ok) return await handleResponseError(res, "Failed to delete user");
+      if (!res.ok)
+        return await handleResponseError(res, "Failed to delete user");
 
       setMembers((prev) => prev.filter((u) => u.id !== id));
       toast.success("User deleted successfully");

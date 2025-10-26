@@ -69,6 +69,9 @@ def add_user():
         }), 201
 
     except Exception as e:
+        if 'EMAIL_EXISTS' in str(e):
+            return jsonify({'msg': 'Email already exists'}), 409
+        
         return jsonify({'msg': 'Internal server error', 'error': str(e)}), 500
 @users_bp.route('/edit-user/<uid>', methods=['PUT'])
 def edit_user(uid):
