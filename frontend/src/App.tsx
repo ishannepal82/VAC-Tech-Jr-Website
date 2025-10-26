@@ -24,6 +24,7 @@ import AdminPolls from "./admin/pages/AdminPolls";
 import AdminSettings from "./admin/pages/AdminSettings";
 // import Notification from "./components/Notification";
 import PreLoginLanding from "./pages/Landing";
+import Intruder from "./pages/intruder";
 
 const PublicLayout = () => (
   <>
@@ -39,6 +40,7 @@ function App() {
       <ScrollToTop />
       <Routes>
         <Route path="/auth" element={<AuthPage />} />
+        <Route path="/intruder" element={<Intruder />} />
 
         <Route element={<PublicLayout />}>
           <Route index element={<PreLoginLanding />} />

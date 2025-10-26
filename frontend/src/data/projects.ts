@@ -1,17 +1,21 @@
 // src/data/projects.ts
 
 export interface Project {
-  id: number;
-  name: string;
+  id: string;
+  title: string;
   author: string;
-  desc: string;
-  timeframe: string;
-  is_completed: boolean;
+  author_email: string;
+  committee: string;
+  description: string;
+  github: string;
   is_approved: boolean;
-  technologies: string[];
+  is_completed?: boolean;
   members: { name: string; avatarUrl?: string }[];
   points: number;
-  github?: string;
+  project_timeframe: string;
+  required_members: number;
+  unknown_members: any[];
+  technologies?: string[];
 }
 
 // export const allProjects: Project[] = [

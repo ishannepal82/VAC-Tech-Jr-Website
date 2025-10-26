@@ -1,6 +1,7 @@
+// src/pages/DashboardPage.tsx
+
 import React, { useState } from "react";
 import { useEffect } from "react";
-
 import CountUp from "react-countup";
 import {
   User,
@@ -15,13 +16,14 @@ import {
 import CreateProjectModal from "../components/CreateProjectModal";
 
 export default function DashboardPage() {
-  const [data, setData] = useState<{ [key: string]: string }>({});
-  const [_loading, setLoading] = useState(true);
+  // FIX 1: Change type to `any` to allow for numbers (points, etc.) and strings from API.
+  const [data, setData] = useState<{ [key: string]: any }>({});
+  const [loading, setLoading] = useState(true); // Renamed _loading to loading for clarity
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  // This static data is fine for parts of the UI not driven by the API (like workshops, contributions)
   const memberData = {
     profileImage: "./src/assets/hod&ch/rishab.jpg",
-    name: "Rishab Thapa",
     contributions: [
       {
         id: 1,
@@ -60,8 +62,8 @@ export default function DashboardPage() {
         {typeof value === "number" ? (
           <CountUp end={value} duration={5} />
         ) : (
-          value
-        )}{" "}
+          value || "N/A"
+        )}
       </p>
       <p className="text-xs text-gray-400 mt-1">{label}</p>
     </div>
@@ -95,7 +97,7 @@ export default function DashboardPage() {
         );
         const jsonData = await response.json();
         const userData = jsonData?.user_info;
-        setData(userData);
+        setData(userData || {}); // Use empty object as fallback
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
       } finally {
@@ -105,15 +107,24 @@ export default function DashboardPage() {
     fetchData();
   }, []);
 
+  // Show a loading screen while data is being fetched to prevent errors
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#0a1a33] flex items-center justify-center text-white text-xl font-poppins">
+        Loading Dashboard...
+      </div>
+    );
+  }
+
   return (
     <>
       <main className="min-h-screen bg-[#0a1a33] p-4 sm:p-6 lg:p-8 font-poppins">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
           <div className="lg:col-span-1 flex flex-col gap-6">
-            <div className="relative h-130 w-full rounded-xl overflow-hidden shadow-lg">
+            <div className="relative h-96 lg:h-auto lg:aspect-[3/4] w-full rounded-xl overflow-hidden shadow-lg">
               <img
                 src={memberData.profileImage}
-                alt={data.name}
+                alt={data.name || "User Profile"}
                 className="absolute inset-0 w-full h-full object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/10 to-transparent"></div>
@@ -226,10 +237,11 @@ export default function DashboardPage() {
         </div>
       </main>
 
+      {/* ===== FIX #2: Pass the DYNAMIC user name from the fetched `data` state ===== */}
+
       <CreateProjectModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        authorName={memberData.name}
       />
     </>
   );

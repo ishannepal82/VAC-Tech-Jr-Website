@@ -1,10 +1,31 @@
 import { Search, Filter, ArrowRight, Gem } from "lucide-react";
-import type { Project } from "../data/projects";
 import { Link } from "react-router-dom";
 import CountUp from "react-countup";
 import { useEffect, useState } from "react";
 
+// --- IMPORTANT: Update your Project type to match the new API response ---
+// You should have this in a separate file like `src/data/projects.ts`
+export interface Project {
+  id: string;
+  title: string; // CHANGED from 'name'
+  author: string;
+  description: string; // CHANGED from 'desc'
+  points: number;
+  members: { name: string; avatarUrl?: string }[]; // Assuming this structure for members
+  is_completed?: boolean; // This field is now MISSING from your API, making it optional is a good practice
+  committee: string;
+  author_email: string;
+  github: string;
+  is_approved: boolean;
+  project_timeframe: string;
+  required_members: number;
+}
+
+// --- ProjectCard Component (Updated for new data structure) ---
 const ProjectCard = ({ project }: { project: Project }) => {
+  // A project is considered joinable if it's not explicitly marked as completed.
+  const isJoinable = project.is_completed !== true;
+
   return (
     <Link
       to={`/projects/${project.id}`}
@@ -12,7 +33,8 @@ const ProjectCard = ({ project }: { project: Project }) => {
     >
       <div className="flex justify-between rounded-xl items-start gap-4">
         <div className="bg-transparent rounded-xl">
-          <h3 className="text-xl font-bold text-white">{project.name}</h3>
+          {/* CHANGE: Use project.title instead of project.name */}
+          <h3 className="text-xl font-bold text-white">{project.title}</h3>
           <p className="text-sm text-gray-400 mt-1">by {project.author}</p>
         </div>
         <div className="flex-shrink-0 flex items-center gap-2 bg-[#0a1a33] px-3 py-1 rounded-xl border border-yellow-400/50">
@@ -22,33 +44,38 @@ const ProjectCard = ({ project }: { project: Project }) => {
           </span>
         </div>
       </div>
+      {/* CHANGE: Use project.description instead of project.desc */}
       <p className="text-gray-300 mt-4 text-base leading-relaxed">
-        {project.desc}
+        {project.description}
       </p>
       <div className="flex justify-between items-center mt-6">
         <div className="flex items-center gap-2">
           <div className="flex -space-x-3">
-            {project.members.slice(0, 1).map((member, index) => (
+            {project.members.slice(0, 3).map((member, index) => (
               <div
                 key={index}
                 className="w-8 h-8 rounded-full bg-[#0a1a33] border-2 border-[#5ea4ff] flex items-center justify-center text-xs font-bold"
               >
-                {member.charAt(0)}
+                {/* Assuming members are objects with a 'name' property */}
+                {member.name.charAt(0).toUpperCase()}
               </div>
             ))}
-            {project.members.length > 4 && (
+            {project.members.length > 3 && (
               <div className="w-8 h-8 rounded-full bg-[#0a1a33] border-2 border-[#5ea4ff] flex items-center justify-center text-xs font-bold">
-                +{project.members.length - 4}
+                +{project.members.length - 3}
               </div>
             )}
           </div>
-          <span className="text-sm text-gray-400">
-            {project.members.length} member(s)
-          </span>
+          {/* Show member count only if there are members */}
+          {project.members.length > 0 && (
+            <span className="text-sm text-gray-400">
+              {project.members.length} member(s)
+            </span>
+          )}
         </div>
         <div className="flex items-center text-[#9cc9ff] group-hover:text-white transition-colors">
           <span className="text-sm font-semibold">
-            {project.is_completed ? "Join Project" : "View Details"}
+            {isJoinable ? "Join Project" : "View Details"}
           </span>
           <ArrowRight
             size={18}
@@ -60,6 +87,7 @@ const ProjectCard = ({ project }: { project: Project }) => {
   );
 };
 
+// --- Main ProjectsSection Component ---
 export default function ProjectsSection() {
   const [completedProjects, setCompletedProjects] = useState<Project[]>([]);
   const [availableProjects, setAvailableProjects] = useState<Project[]>([]);
@@ -68,24 +96,31 @@ export default function ProjectsSection() {
     try {
       const res = await fetch("http://127.0.0.1:5000/api/projects/projects");
       if (!res.ok) {
-        console.log('Error Fetching Data:', res);
+        console.error("Error Fetching Data:", res);
         return;
       }
       const data = await res.json();
-      console.log(data);
-      const projects = data.projects;
-      const completed_projects = projects.filter(
-      (project: Project) => project.is_completed === true
-    );
-    setCompletedProjects(completed_projects);
-    const available_projects = projects.filter(
-      (project: Project) => project.is_completed === false
-    );
-    setAvailableProjects(available_projects);
+      // Use the updated Project type for type safety
+      const projects: Project[] = data.projects;
+
+      // This logic will now work correctly.
+      // Since 'is_completed' is missing from the API, project.is_completed will be 'undefined'.
+      // 'undefined === true' is false, so 'completed_projects' will be empty.
+      // 'undefined !== true' is true, so 'available_projects' will contain all projects.
+      // **Once you add `is_completed` back to your API, this will automatically work as intended.**
+      const completed = projects.filter(
+        (project) => project.is_completed === true
+      );
+      const available = projects.filter(
+        (project) => project.is_completed !== true
+      );
+
+      setCompletedProjects(completed);
+      setAvailableProjects(available);
     } catch (error) {
-      console.log('Error Fetching Data:', error);
+      console.error("Error Fetching Data:", error);
     }
-  }
+  };
 
   useEffect(() => {
     handleFetch();
@@ -97,7 +132,7 @@ export default function ProjectsSection() {
       className="min-h-screen w-full bg-[#0a1a33] text-white font-poppins py-20 px-4 md:px-20"
     >
       <div className="max-w-7xl mx-auto">
-        {/* ---------- HEADER AND SEARCH ---------- */}
+        {/* Header and Search (No changes needed here) */}
         <div className="text-center">
           <h2 className="text-3xl md:text-5xl font-extrabold text-[#9cc9ff]">
             Our Projects
@@ -107,7 +142,6 @@ export default function ProjectsSection() {
             Explore what we're building and what we've achieved.
           </p>
         </div>
-
         <div className="mt-12 mb-16 max-w-2xl mx-auto">
           <div className="relative">
             <Search
@@ -126,10 +160,11 @@ export default function ProjectsSection() {
           </div>
         </div>
 
-        {/* ---------- PROJECTS GRID ---------- */}
+        {/* Projects Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
+          {/* Available Projects Column */}
           <div className="bg-[#102142] border-2 border-[#3a5a8a] rounded-2xl flex flex-col h-[85vh]">
-            <h3 className="text-2xl font-bold text-white p-6 border-b border-[#3a5a8a] sticky top-0  z-10">
+            <h3 className="text-2xl font-bold text-white p-6 border-b border-[#3a5a8a] sticky top-0 bg-[#102142] z-10">
               Available Projects
             </h3>
             <div className="p-6 space-y-6 overflow-y-auto scrollbar-thin scrollbar-thumb-[#2563eb] scrollbar-track-[#1a2f55]">
@@ -149,13 +184,21 @@ export default function ProjectsSection() {
 
           {/* Completed Projects Column */}
           <div className="bg-[#102142] border-2 border-[#3a5a8a] rounded-2xl flex flex-col h-[85vh]">
-            <h3 className="text-2xl font-bold text-white p-6 border-b border-[#3a5a8a] sticky top-0  z-10">
+            <h3 className="text-2xl font-bold text-white p-6 border-b border-[#3a5a8a] sticky top-0 bg-[#102142] z-10">
               Completed Projects
             </h3>
             <div className="p-6 space-y-6 overflow-y-auto scrollbar-thin scrollbar-thumb-[#2563eb] scrollbar-track-[#1a2f55]">
-              {completedProjects.map((project) => (
-                <ProjectCard key={project.id} project={project} />
-              ))}
+              {completedProjects.length > 0 ? (
+                completedProjects.map((project) => (
+                  <ProjectCard key={project.id} project={project} />
+                ))
+              ) : (
+                <div className="flex items-center justify-center h-full">
+                  <p className="text-gray-400 text-center py-10">
+                    No projects have been completed yet.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>

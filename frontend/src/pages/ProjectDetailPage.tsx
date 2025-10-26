@@ -1,37 +1,55 @@
 // src/pages/ProjectDetailPage.tsx
 import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom"; // ✨ CHANGED: Import hooks and Link
-import type { Project } from "../data/projects";
+import { useParams, Link } from "react-router-dom";
 import { Github, Calendar, Award, ChevronLeft } from "lucide-react";
+import type { Project } from "../data/projects"; // Make sure this type is updated!
 
 export default function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [project, setProject] = useState<Project | null>(null);
 
-  const fetchEventsById = async (id) => {
+  // Renamed function for clarity
+  const fetchProjectById = async (projectId: string | undefined) => {
+    if (!projectId) return; // Don't fetch if id is not available
+
     try {
-      const res = await fetch(`http://127.0.0.1:5000/api/projects/get-project/${id}`);
+      const res = await fetch(
+        `http://127.0.0.1:5000/api/projects/get-project/${projectId}`
+      );
       if (!res.ok) {
-        console.log('Error Fetching Data:', res);
+        console.error("Error Fetching Data:", res);
+        setProject(null); // Set to null on error
         return;
       }
       const data = await res.json();
-      console.log(data);
       setProject(data.project);
+    } catch (e) {
+      console.error("Fetch error:", e);
+      setProject(null);
     }
-    catch (e) {
-      console.log(e);
-      return;
-    }
-  }
+  };
+
   useEffect(() => {
-    fetchEventsById(id);
-  }, []);
-  
+    fetchProjectById(id);
+  }, [id]); // Depend on 'id' so it refetches if the id changes
+
+  // Loading state
+  if (project === undefined) {
+    return (
+      <div className="h-screen w-full bg-[#0a1a33] text-white flex items-center justify-center">
+        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-white"></div>
+      </div>
+    );
+  }
+
+  // Not Found state
   if (!project) {
     return (
       <div className="h-screen w-full bg-[#0a1a33] text-white flex items-center justify-center">
         <h1 className="text-3xl font-bold">Project Not Found</h1>
+        <Link to="/projects" className="ml-4 text-[#9cc9ff] hover:underline">
+          Go Back
+        </Link>
       </div>
     );
   }
@@ -39,8 +57,9 @@ export default function ProjectDetailPage() {
   return (
     <div className="min-h-screen w-full bg-[#0a1a33] text-white font-poppins py-12 sm:py-20 px-4">
       <div className="max-w-4xl mx-auto">
+        {/* FIX: The route is likely /projects, not /ProjectsSection */}
         <Link
-          to="/ProjectsSection"
+          to="/projects"
           className="inline-flex items-center gap-2 text-[#9cc9ff] hover:text-white mb-8 transition-colors"
         >
           <ChevronLeft size={20} />
@@ -49,8 +68,9 @@ export default function ProjectDetailPage() {
 
         <div className="bg-[#102142] border-2 border-[#3a5a8a] rounded-2xl flex flex-col justify-between overflow-hidden min-h-[75vh]">
           <div className="p-8 md:p-12">
+            {/* FIX: Use project.title */}
             <h1 className="text-4xl md:text-5xl font-extrabold text-[#9cc9ff] leading-tight">
-              {project.name}
+              {project.title}
             </h1>
             <p className="text-gray-400 mt-2 text-lg">by {project.author}</p>
 
@@ -59,8 +79,9 @@ export default function ProjectDetailPage() {
                 <Calendar className="text-[#b3d9ff]" size={24} />
                 <div>
                   <p className="text-gray-400 text-sm">Timeframe</p>
+                  {/* FIX: Use project.project_timeframe */}
                   <p className="text-white font-semibold">
-                    {project.timeframe}
+                    {project.project_timeframe}
                   </p>
                 </div>
               </div>
@@ -78,23 +99,29 @@ export default function ProjectDetailPage() {
             <h2 className="text-2xl font-bold text-white mb-4">
               About the Project
             </h2>
+            {/* FIX: Use project.description */}
             <p className="text-gray-300 leading-relaxed text-base">
-              {project.desc}
+              {project.description}
             </p>
 
-            <h3 className="text-xl font-bold text-white mt-8 mb-4">
-              Technology Stack
-            </h3>
-            <div className="flex flex-wrap gap-3">
-              {project.technologies?.map((tech) => (
-                <span
-                  key={tech}
-                  className="bg-[#253961] text-[#9cc9ff] px-4 py-2 rounded-full font-medium text-sm"
-                >
-                  {tech}
-                </span>
-              ))}
-            </div>
+            {/* FIX: Safely handle technologies array if it exists */}
+            {project.technologies && project.technologies.length > 0 && (
+              <>
+                <h3 className="text-xl font-bold text-white mt-8 mb-4">
+                  Technology Stack
+                </h3>
+                <div className="flex flex-wrap gap-3">
+                  {project.technologies.map((tech) => (
+                    <span
+                      key={tech}
+                      className="bg-[#253961] text-[#9cc9ff] px-4 py-2 rounded-full font-medium text-sm"
+                    >
+                      {tech}
+                    </span>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
 
           <div className="bg-[#0a1a33]/60 p-6 border-t-2 border-[#3a5a8a] flex flex-col sm:flex-row items-center justify-between gap-6">
@@ -117,7 +144,8 @@ export default function ProjectDetailPage() {
                           className="rounded-full"
                         />
                       ) : (
-                        member.charAt(0)
+                        // FIX: Access the name property before calling charAt
+                        member.name?.charAt(0).toUpperCase()
                       )}
                     </div>
                   ))
@@ -135,13 +163,14 @@ export default function ProjectDetailPage() {
             </div>
 
             <div>
-              {!project.is_completed ? (
+              {/* This logic correctly handles a missing 'is_completed' flag */}
+              {project.is_completed !== true ? (
                 <button className="bg-[#2563eb] hover:bg-[#1d4ed8] text-white px-8 py-3 rounded-full font-semibold text-lg transition w-full sm:w-auto">
                   Join Project
                 </button>
               ) : (
                 <a
-                  href={project.github}
+                  href={project.github || "#"} // Fallback in case github link is empty
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center justify-center border border-[#b3d9ff] text-[#b3d9ff] hover:bg-[#1a2f55] px-8 py-3 rounded-full font-semibold text-lg transition w-full sm:w-auto"
