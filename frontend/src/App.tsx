@@ -4,7 +4,6 @@ import HomePage from "./pages/Home";
 import ScrollToTop from "./components/ScrollToTop";
 import CommunityPage from "./pages/CommunityPage";
 import PollsPage from "./components/community/Polls";
-// import PreLoginLanding from "./pages/Landing";
 import WallOfLegends from "./components/community/WallOfLegends";
 import ProjectsSection from "./pages/ProjectsSection";
 import GalleryPage from "./components/gallery/GalleryPage";
@@ -23,6 +22,7 @@ import AdminProjects from "./admin/pages/AdminProjects";
 import AdminCommunity from "./admin/pages/AdminCommunity";
 import AdminPolls from "./admin/pages/AdminPolls";
 import AdminSettings from "./admin/pages/AdminSettings";
+// import Notification from "./components/Notification";
 import PreLoginLanding from "./pages/Landing";
 
 const PublicLayout = () => (

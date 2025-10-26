@@ -15,12 +15,13 @@ import {
 import CreateProjectModal from "../components/CreateProjectModal";
 
 export default function DashboardPage() {
-  const [data, setData] = useState <{ [key: string]: string }>({});
-  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<{ [key: string]: string }>({});
+  const [_loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const memberData = {
     profileImage: "./src/assets/hod&ch/rishab.jpg",
+    name: "Rishab Thapa",
     contributions: [
       {
         id: 1,
