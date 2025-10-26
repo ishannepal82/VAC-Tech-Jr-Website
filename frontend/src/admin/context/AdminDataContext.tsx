@@ -1,6 +1,7 @@
 import { createContext, useState, useContext } from "react";
 import type { ReactNode } from "react";
 import { toast } from "react-hot-toast";
+import { useNavigate } from "react-router-dom";
 
 type Role = "Member" | "Head";
 type Committee = "None" | "PR" | "ECA" | "Coding" | "Graphics" | "Bod";
@@ -36,6 +37,7 @@ const AdminDataContext = createContext<AdminDataContextType | undefined>(
 
 export const AdminDataProvider = ({ children }: { children: ReactNode }) => {
   const [members, setMembers] = useState<Member[]>([]);
+  const navigate = useNavigate();
 
   const addMember = async (
     name: string,
@@ -96,9 +98,20 @@ export const AdminDataProvider = ({ children }: { children: ReactNode }) => {
         credentials: "include",
       });
 
-      if (!res.ok) throw new Error("Failed to fetch users");
+      if (!res.ok) {
+        if (res.status === 401) {
+          toast.error("You are not Authorized to view this page");
+          navigate("/dashboard"); 
+          return;
+        }
+        if (res.status === 500) {
+          toast.error("Internal Server Error, Please try Refreshing the page!");
+        }
+        throw new Error("Failed to fetch users");
+      }
 
       const data = await res.json();
+      toast.success("Users Fetched Successfully");
       console.log("✅ Users fetched:", data);
 
       // Map backend users to Member type
@@ -111,7 +124,6 @@ export const AdminDataProvider = ({ children }: { children: ReactNode }) => {
         committee: u.committee,
         memoTokens: u.memo_tokens,
       }));
-
       setMembers(fetchedMembers);
     } catch (e) {
       console.error("❌ Error fetching users:", e);
@@ -134,7 +146,10 @@ export const AdminDataProvider = ({ children }: { children: ReactNode }) => {
         }
       );
 
-      if (!res.ok) throw new Error("Failed to delete user");
+      if (!res.ok) {
+        throw new Error("Failed to delete user");
+      }
+
 
       const data = await res.json();
       console.log("✅ User deleted:", data);
