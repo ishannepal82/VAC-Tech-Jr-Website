@@ -41,7 +41,7 @@ export const Intruder = () => {
         animate={{
           opacity: 1,
           scale: 1,
-          x: [0, -1, 2, -3, 3, -2, 1, 0],
+          x: [0, -3, 4, -5, 3, -4, 2, 0],
         }}
         transition={{
           opacity: { duration: 0.5, delay: 0.5 },
