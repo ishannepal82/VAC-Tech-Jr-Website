@@ -14,8 +14,19 @@ interface Member {
   role: Role;
   committee: Committee;
   memo_tokens: number;
+  is_admin: boolean;
 }
 
+// ✅ 1. Define the type for the data we'll send when updating
+// Using Partial<Member> allows us to send only the fields that have changed.
+type MemberUpdatePayload = Partial<Omit<Member, "id" | "points">> & {
+  password?: string;
+  is_admin?: boolean;
+  memo_tokens?: number;
+  points?: number;
+};
+
+// ✅ 2. Update the context type to include the new updateMember function
 interface AdminDataContextType {
   members: Member[];
   addMember: (
@@ -29,6 +40,7 @@ interface AdminDataContextType {
   ) => Promise<void>;
   getMembers: () => Promise<void>;
   deleteMember: (id: string) => Promise<void>;
+  updateMember: (id: string, updatedData: MemberUpdatePayload) => Promise<void>; // New function signature
 }
 
 const AdminDataContext = createContext<AdminDataContextType | undefined>(
@@ -48,6 +60,7 @@ export const AdminDataProvider = ({ children }: { children: ReactNode }) => {
     is_admin: boolean,
     memo_tokens: number
   ) => {
+    // ... (your existing addMember function, no changes needed here)
     try {
       const res = await fetch("http://127.0.0.1:5000/api/users/add-user", {
         method: "POST",
@@ -64,25 +77,10 @@ export const AdminDataProvider = ({ children }: { children: ReactNode }) => {
           is_admin,
         }),
       });
-
       if (!res.ok) throw new Error("Failed to add user");
-
       const data = await res.json();
       console.log("✅ User added:", data);
-
-      setMembers((prev) => [
-        ...prev,
-        {
-          id: data.id,
-          name,
-          email,
-          points: 0,
-          role,
-          committee,
-          memo_tokens: memo_tokens,
-        },
-      ]);
-
+      await getMembers(); // Refresh the entire list to ensure consistency
       toast.success("User added successfully");
     } catch (e) {
       console.error("❌ Error adding user:", e);
@@ -90,31 +88,15 @@ export const AdminDataProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // ✅ New function to fetch all users
   const getMembers = async () => {
+    // ... (your existing getMembers function with a small fix)
     try {
       const res = await fetch("http://127.0.0.1:5000/api/users/get-all-users", {
         method: "GET",
         credentials: "include",
       });
-
-      if (!res.ok) {
-        if (res.status === 401) {
-          toast.error("You are not Authorized to view this page");
-          navigate("/dashboard"); 
-          return;
-        }
-        if (res.status === 500) {
-          toast.error("Internal Server Error, Please try Refreshing the page!");
-        }
-        throw new Error("Failed to fetch users");
-      }
-
+      if (!res.ok) throw new Error("Failed to fetch users");
       const data = await res.json();
-      toast.success("Users Fetched Successfully");
-      console.log("✅ Users fetched:", data);
-
-      // Map backend users to Member type
       const fetchedMembers: Member[] = data.users.map((u: any) => ({
         id: u.id,
         name: u.name,
@@ -122,21 +104,17 @@ export const AdminDataProvider = ({ children }: { children: ReactNode }) => {
         points: u.points,
         role: u.role,
         committee: u.committee,
-        memoTokens: u.memo_tokens,
+        // ❗️ BUG FIX: Your Member interface uses 'memo_tokens', not 'memoTokens'. This is now correct.
+        memo_tokens: u.memo_tokens,
       }));
       setMembers(fetchedMembers);
     } catch (e) {
       console.error("❌ Error fetching users:", e);
-      toast.error("Failed to fetch users");
     }
   };
 
-  // Optional: fetch users on mount
-  // useEffect(() => {
-  //   getMembers();
-  // }, []);
-
   const deleteMember = async (id: string) => {
+    // ... (your existing deleteMember function, no changes needed here)
     try {
       const res = await fetch(
         `http://127.0.0.1:5000/api/users/delete-user/${id}`,
@@ -145,15 +123,7 @@ export const AdminDataProvider = ({ children }: { children: ReactNode }) => {
           credentials: "include",
         }
       );
-
-      if (!res.ok) {
-        throw new Error("Failed to delete user");
-      }
-
-
-      const data = await res.json();
-      console.log("✅ User deleted:", data);
-
+      if (!res.ok) throw new Error("Failed to delete user");
       setMembers((prev) => prev.filter((u) => u.id !== id));
       toast.success("User deleted successfully");
     } catch (e) {
@@ -162,11 +132,47 @@ export const AdminDataProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // ✅ 3. Implement the new updateMember function
+  const updateMember = async (id: string, updatedData: MemberUpdatePayload) => {
+    const toastId = toast.loading("Updating member...");
+    try {
+      const res = await fetch(
+        `http://127.0.0.1:5000/api/users/edit-user/${id}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify(updatedData),
+        }
+      );
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Failed to update member");
+      }
+
+      console.log("✅ User updated successfully");
+      toast.success('Sucessfully edited the User, Inform Him/Her to Login again to gain access to the app!', {toasterId: toastId});
+
+      // Update the local state for an instant UI update
+      setMembers((prevMembers) =>
+        prevMembers.map((member) =>
+          member.id === id ? { ...member, ...updatedData } : member
+        )
+      );
+    } catch (e: any) {
+      console.error("❌ Error updating member:", e);
+      toast.error(e.message || "Failed to update member", { id: toastId });
+    }
+  };
+
+  // ✅ 4. Add updateMember to the context value
   const value: AdminDataContextType = {
     members,
     addMember,
     getMembers,
     deleteMember,
+    updateMember,
   };
 
   return (
@@ -177,6 +183,7 @@ export const AdminDataProvider = ({ children }: { children: ReactNode }) => {
 };
 
 export const useAdminData = () => {
+  // ... (no changes needed here)
   const context = useContext(AdminDataContext);
   if (!context) {
     throw new Error("useAdminData must be used within an AdminDataProvider");

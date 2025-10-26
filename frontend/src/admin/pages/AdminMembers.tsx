@@ -16,18 +16,21 @@ interface Member {
   role: Role;
   committee: Committee;
   memo_tokens: number;
+  is_admin: boolean;
 }
 
 const getRank = (points: number): Rank => {
-  if (points <= 100) return "Newbie";
-  if (points <= 300) return "Explorer";
-  if (points <= 600) return "Builder";
-  if (points <= 1000) return "Developer";
+  if (points < 100) return "Newbie";
+  if (points < 350) return "Explorer";
+  if (points < 650) return "Builder";
+  if (points < 1000) return "Developer";
   return "Hacker";
 };
 
 export default function AdminMembers() {
-  const { members, addMember, getMembers, deleteMember } = useAdminData();
+  // Add updateMember to the destructuring assignment
+  const { members, addMember, getMembers, deleteMember, updateMember } =
+    useAdminData();
 
   const [searchTerm, setSearchTerm] = useState("");
   const [filters, setFilters] = useState({ role: "All", committee: "All" });
@@ -40,11 +43,11 @@ export default function AdminMembers() {
   const [is_admin, setIsAdmin] = useState<boolean>(false);
   const [committee, setCommittee] = useState<Committee>("None");
   const [memo_tokens, setMemoTokens] = useState<number>(0);
+  const [points, setPoints] = useState<number>(0);
   // Near your other state declarations
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [memberToDelete, setMemberToDelete] = useState<string | null>(null);
 
-  // ✅ Fetch members on mount
   useEffect(() => {
     getMembers();
   }, []);
@@ -58,6 +61,8 @@ export default function AdminMembers() {
       setRole(member.role);
       setCommittee(member.committee);
       setMemoTokens(member.memo_tokens);
+      setIsAdmin(member.is_admin);
+      setPoints(member.points);
     } else {
       setName("");
       setEmail("");
@@ -83,16 +88,34 @@ export default function AdminMembers() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await addMember(
-      name,
-      email,
-      password,
-      role,
-      committee,
-      is_admin,
-      memo_tokens
-    );
-    await getMembers(); // refresh list after adding
+
+    if (editingMember) {
+      // ✅ EDIT MODE
+      // We call a new 'updateMember' function from the context
+      await updateMember(editingMember.id!, {
+        name,
+        email,
+        role,
+        committee,
+        is_admin,
+        memo_tokens,
+        points,
+        ...(password && { password }),
+      });
+    } else {
+      // ✅ ADD MODE (existing logic)
+      await addMember(
+        name,
+        email,
+        password,
+        role,
+        committee,
+        is_admin,
+        memo_tokens
+      );
+    }
+
+    await getMembers(); // refresh list after action
     handleCloseModal();
   };
 
@@ -169,7 +192,6 @@ export default function AdminMembers() {
               <option value="Head">Head</option>
             </select>
           </div>
-
           <div className="relative">
             <Filter
               className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
@@ -229,13 +251,17 @@ export default function AdminMembers() {
                 </td>
                 <td className="px-6 py-4">{member.role}</td>
                 <td className="px-6 py-4">{member.committee}</td>
+
                 <td className="px-6 py-4 flex gap-4">
-                  <button className="text-blue-400 hover:text-blue-300">
+                  <button
+                    className="text-blue-400 hover:text-blue-300"
+                    onClick={() => handleOpenModal(member)}
+                  >
                     <Edit size={18} />
                   </button>
                   <button
                     className="text-red-400 hover:text-red-300"
-                    onClick={() => handleDeleteClick(member.id!)} // <-- new function
+                    onClick={() => handleDeleteClick(member.id!)}
                   >
                     <Trash2 size={18} />
                   </button>
@@ -303,14 +329,16 @@ export default function AdminMembers() {
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <input
               type="password"
-              placeholder="Password"
+              placeholder={
+                editingMember ? "New Password (optional)" : "Password"
+              }
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-[#0f172a] border border-gray-600 rounded-lg py-2 px-4 text-white"
-              required
+              className="w-full bg-[#0f172a] border border-gray-600 rounded-lg py-2 px-2 text-sm text-white"
+              required={!editingMember}
             />
             <select
               value={is_admin ? "true" : "false"}
@@ -320,6 +348,13 @@ export default function AdminMembers() {
               <option value="false">Is Not Admin</option>
               <option value="true">Is Admin</option>
             </select>
+            <input
+              type="number"
+              placeholder="Points"
+              value={points}
+              onChange={(e) => setPoints(Number(e.target.value))}
+              className="w-full bg-[#0f172a] border border-gray-600 rounded-lg py-2 px-4 text-white"
+            />
           </div>
 
           <div className="flex justify-end gap-4 pt-4">

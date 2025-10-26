@@ -1,5 +1,6 @@
 from flask import Blueprint, jsonify, request, current_app
 from app.routes.utils.user_verifier_func import get_current_user
+from app.routes.utils.user_rank_checker import user_rank_checker
 from firebase_admin import auth
 
 users_bp = Blueprint('users', __name__)
@@ -53,13 +54,14 @@ def add_user():
         users_ref = db.collection('Users').document(uid)
         users_ref.set({
             'name': data.get('name'),
-            'memo_token': data.get('memo_token'),
-            'points': 10,
+            'memo_tokens': data.get('memo_tokens'),
+            'points': 0,
             'role': data.get('role'),
-            'commitee': data.get('commitee'),
+            'committee': data.get('committee'),
             'is_admin': data.get('is_admin', False),
             'rank': 'Newbie',
-            'email': data.get('email')
+            'email': data.get('email'),
+            'workshops': []
         })
 
         return jsonify({
@@ -68,7 +70,7 @@ def add_user():
 
     except Exception as e:
         return jsonify({'msg': 'Internal server error', 'error': str(e)}), 500
-@users_bp.route('/edit_user/<uid>', methods=['PUT'])
+@users_bp.route('/edit-user/<uid>', methods=['PUT'])
 def edit_user(uid):
     try:
         db = current_app.config['db']
@@ -77,19 +79,43 @@ def edit_user(uid):
         if not data:
             return jsonify({'msg': 'Missing JSON data'}), 400
         
-        updated_info = {}
-        updated_fields = ["email", "password", "commitee", "role", "name", "memo_tokens", "is_admin"]
-        for field in updated_fields:
-            if field in data:
-                updated_info[field] = data[field]
-            
         user = get_current_user()
         if not user or not user['is_admin']:
             return jsonify({'msg': 'Unauthorized User'}), 401
         
+        updated_info = {}
+        updated_fields = ["email", "password", "committee", "role", "name", "memo_tokens", "is_admin", "points"]
+        for field in updated_fields:
+            if field in data:
+                updated_info[field] = data[field]
         
+        update_args = {}
+        if "email" in data:
+            update_args["email"] = data["email"]
+        if "password" in data:
+            update_args["password"] = data["password"]
+        if "name" in data:
+            update_args["display_name"] = data["name"]
+
+        if update_args:
+            auth.update_user(uid, **update_args)
+
+        # --- Update custom claims (role, admin, etc.) ---
+        claims = {}
+        if "is_admin" in data:
+            claims["is_admin"] = data["is_admin"]
+        if "role" in data:
+            claims["role"] = data["role"]
+        if claims:
+            auth.set_custom_user_claims(uid, claims)
+        
+        rank = user_rank_checker(data.get('points', 0))
+
+        updated_info['rank'] = rank
         users_ref = db.collection('Users').document(uid)
-        users_ref.update(updated_info)
+        users_ref.update((
+            updated_info
+        ))
 
         auth.revoke_refresh_tokens(uid)
 
@@ -99,6 +125,33 @@ def edit_user(uid):
 
     except Exception as e:
         return jsonify({'msg': 'Internal server error', 'error': str(e)}), 500
+    
+# @users_bp.route('/edit-points/<uid>', methods=['PUT'])
+# def edit_user(uid):
+#     try:
+#         db = current_app.config['db']
+#         data = request.get_json()
+
+#         if not data:
+#             return jsonify({'msg': 'Missing JSON data'}), 400
+        
+#         user = get_current_user()
+#         if not user or not user['is_admin']:
+#             return jsonify({'msg': 'Unauthorized User'}), 401
+        
+#         points = data.get('points', 0)
+#         if points < 0:
+#             return jsonify({'msg': 'Points cannot be negative'}), 400
+        
+#         users_ref = db.collection('Users').document(uid)
+#         users_ref.update({'points': points})
+
+#         return jsonify({
+#             'msg': 'Successfully updated the user'
+#         }), 200
+
+#     except Exception as e:
+#         return jsonify({'msg': 'Internal server error', 'error': str(e)}), 500
     
 
 @users_bp.route('/delete-user/<uid>', methods=['DELETE'])
