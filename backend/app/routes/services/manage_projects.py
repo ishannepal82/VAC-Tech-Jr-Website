@@ -21,21 +21,7 @@ def get_all_projects():
         return jsonify({'msg': 'Sucessfully fetched all projects', 'projects': projects}), 200
     except Exception as e:
         return jsonify({'msg': 'Internal server error', 'error': str(e)}), 500
-    
-# @projects_bp.route('/approved-projects', methods=['GET'])
-# def get_approved_projects():
-#     try:
-#         'Creating a db Instance'
-#         db = current_app.config['db']
-        
-#         '''Creating a ref for projects'''
-#         projects_ref = db.collection('projects')
-#         projects = [doc.to_dict() | {"id": doc.id} for doc in projects_ref.stream()]
 
-#         return jsonify({'msg': 'Sucessfully fetched all projects', 'projects': projects}), 200
-#     except Exception as e:
-#         return jsonify({'msg': 'Internal server error', 'error': str(e)}), 500
-    
 @projects_bp.route('/get-project/<id>', methods=['GET'])
 def get_project_by_id(id):
     try:
@@ -106,14 +92,13 @@ def edit_project(id):
         'Creating a db Instance'
         db = current_app.config['db']
 
-        user = get_current_user()
-        if not user: 
-            return jsonify ({'msg': "Unauthorized User"}), 401
-
         '''Creating a ref for projects'''
         project_ref = db.collection('projects').document(id)
         doc = project_ref.get()
-        
+
+        user = get_current_user()
+        if not user or not user['is_admin'] or not user['email'] == doc.to_dict()['author_email']: 
+            return jsonify ({'msg': "Unauthorized User"}), 401
         '''Receiving Input from frontend'''
         data = request.get_json()
 

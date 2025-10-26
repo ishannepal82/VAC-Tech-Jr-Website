@@ -15,7 +15,7 @@ def get_dashboard_info():
         user_ref = db.collection('Users').document(user['uid'])
         user_doc = user_ref.get()
         
-        is_admin = user.get('is_admin', False)
+        is_admin = user['is_admin']
         role = user.get('role', 'member')
         
 

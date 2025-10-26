@@ -7,10 +7,12 @@ export default function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
 
  const handleSumbit = async (e: React.FormEvent) => {
     e.preventDefault();
     try{
+      setLoading(true);
       const res = await fetch("http://127.0.0.1:5000/api/auth/login", {
         method: "POST",
         credentials: "include",
@@ -21,13 +23,25 @@ export default function LoginForm() {
       });
 
       if (!res.ok){
+        setLoading(false);
+        if (res.status == 500){
+          toast.error("Internal Server Error, Please try loggin in again!");
+        }
+        if (res.status == 401) {
+          toast.error("Invalid Credentials, Make Sure You Have Signed Up!");
+        }
+        if (res.status == 404) {
+          toast.error("User Not Found, Make Sure You Have Signed Up!");
+        }
+
+
         console.log('Error Fetching Data:', res);
         return;
       }
 
-      const data = await res.json();
-      console.log(data);
+      await res.json();
       toast.success("Logged in Sucessfully");
+      setLoading(false);
       navigate('/home');
     }
 

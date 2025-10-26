@@ -9,6 +9,7 @@ export default function SignUpForm() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [loading, setLoading] = useState(false);
 
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {};
@@ -52,6 +53,7 @@ export default function SignUpForm() {
     }
 
     try{
+      setLoading(true);
       const res = await fetch("http://127.0.0.1:5000/api/auth/register", {
         method: "POST",
         headers: {
@@ -61,6 +63,19 @@ export default function SignUpForm() {
       });
 
       if (!res.ok){
+        setLoading(false);
+        if (res.status == 500){
+          toast.error("Internal Server Error, Please try loggin in again!");
+        }
+        if (res.status == 401) {
+          toast.error("Invalid Credentials, Make Sure You Have Signed Up!");
+        }
+        if (res.status == 404) {
+          toast.error("User Not Found, Make Sure You Have Signed Up!");
+        }
+        if (res.status == 409) {
+          toast.error("User Already Exists with the email provided, Try Loggin in!");
+        }
         console.log('Error Fetching Data:', res);
         return;
       }
@@ -68,9 +83,11 @@ export default function SignUpForm() {
       const data = await res.json();
       console.log(data);
       toast.success("Account Created Successfully! Login to Gain Access to the app");
+      setLoading(false);
     }
 
     catch (e) {
+      setLoading(false)
       console.log('Error Found while Fetching User data', e);
       return;
     }
@@ -157,8 +174,9 @@ export default function SignUpForm() {
         <button
           type="submit"
           className="w-full bg-[#2563eb] hover:bg-[#1d4ed8] text-white px-8 py-3 rounded-lg font-semibold transition !mt-6"
+          disabled={loading}
         >
-          Sign Up
+          {loading ? "Loading..." : "Sign Up"}
         </button>
       </form>
     </div>
