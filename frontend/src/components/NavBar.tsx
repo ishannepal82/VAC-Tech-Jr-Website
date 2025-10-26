@@ -77,7 +77,7 @@ const NavBar = () => {
 
           <div className="hidden lg:flex items-center gap-14">
             <div className="flex gap-x-14 cursor-pointer">
-              <NavLinkList onMailClick={() => setIsMenuOpen(true)} />
+              <NavLinkList onMailClick={() => setOpenMail(true)} />
             </div>
 
             <button className="cursor-pointer font-semibold text-primary border-2 rounded-lg px-4 py-2 border-white text-white hover:bg-white hover:text-[#0a1a33] transition">
@@ -121,7 +121,13 @@ const NavBar = () => {
         {isMenuOpen && (
           <div className="lg:hidden mt-4">
             <div className="flex flex-col items-center gap-y-6 py-8 bg-transparent">
-              <NavLinkList onLinkClick={() => setIsMenuOpen(false)} />
+              <NavLinkList
+                onLinkClick={() => setIsMenuOpen(false)}
+                onMailClick={() => {
+                  setOpenMail(true);
+                  setIsMenuOpen(false);
+                }}
+              />
               <button className="cursor-pointer font-semibold text-primary border-2 rounded-lg px-4 py-2 border-white text-white hover:bg-white hover:text-[#0a1a33] transition">
                 Get Started
               </button>
@@ -129,7 +135,8 @@ const NavBar = () => {
           </div>
         )}
       </nav>
-      {openMail && <Notification setOpenMail={setOpenMail} />}
+
+      {openMail && <Notification onClose={() => setOpenMail(false)} />}
     </>
   );
 };
