@@ -11,7 +11,7 @@ def get_all_users():
 
         user = get_current_user()
         if not user:
-            return jsonify({'msg': 'Unauthorized User'}), 400
+            return jsonify({'msg': 'Unauthorized User'}), 401
         
         users_ref = db.collection('Users')
         users = [doc.to_dict() | {"id": doc.id} for doc in users_ref.stream()]
@@ -90,6 +90,8 @@ def edit_user(uid):
         
         users_ref = db.collection('Users').document(uid)
         users_ref.update(updated_info)
+
+        auth.revoke_refresh_tokens(uid)
 
         return jsonify({
             'msg': 'Successfully updated the user'

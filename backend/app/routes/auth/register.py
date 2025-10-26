@@ -42,6 +42,9 @@ def register_user():
         return jsonify({'msg': 'User registered sucessfully'}), 201
     
     except Exception as e:
+        if "EMAIL_EXISTS" in str(e):
+            return jsonify({'msg': 'A user with this email already exists.'}), 409
+
         return jsonify({'msg': f'Error registering user: {str(e)}'}), 500
     
         
