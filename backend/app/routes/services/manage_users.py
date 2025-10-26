@@ -11,7 +11,7 @@ def get_all_users():
         db = current_app.config['db']
 
         user = get_current_user()
-        if not user:
+        if not user or not user['is_admin']:
             return jsonify({'msg': 'Unauthorized User'}), 401
         
         users_ref = db.collection('Users')
