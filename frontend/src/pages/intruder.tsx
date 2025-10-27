@@ -11,7 +11,7 @@ export const Intruder = () => {
   useEffect(() => {
     const lines = [
       "> SCANNING SECTOR 7G...",
-      "> UNAUTHORIZED SIGNATURE DETECTED.",
+      ">Your presence has been logged.",
       "> THREAT ISOLATION PROTOCOL: ACTIVE.",
       "> PURGING ANOMALY...",
     ];
@@ -71,7 +71,7 @@ export const Intruder = () => {
         transition={{ duration: 1, delay: 0.3 }}
         className="mt-4 text-lg text-white/60 max-w-xl"
       >
-        Your presence has been logged. You should not be here.
+        Unautharized Signatured detected. You should not be here.
       </motion.p>
 
       <motion.div
