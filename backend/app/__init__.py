@@ -52,5 +52,8 @@ def create_app():
 
     from app.routes.services.manage_users import users_bp
     app.register_blueprint(users_bp, url_prefix='/api/users')
+
+    from app.routes.services.notifications import notifications_bp
+    app.register_blueprint(notifications_bp, url_prefix='/api/notifications')
     
     return app

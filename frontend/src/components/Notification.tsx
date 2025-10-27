@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   ArrowBigRightDash,
   Bell,
@@ -8,86 +8,53 @@ import {
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
-const initialNotifications = [
-  {
-    id: 1,
-    type: "project",
-    title: "New Pull Request in 'Club-Website-V2'",
-    description: "User 'alex_dev' submitted a PR for the new auth flow.",
-    timestamp: new Date(Date.now() - 1000 * 60 * 5), // 5 minutes ago
-    isRead: false,
-  },
-  {
-    id: 2,
-    type: "event",
-    title: "Reminder: 'Intro to Docker' workshop tomorrow",
-    description: "The workshop starts at 2 PM. Don't forget to register!",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 3), // 3 hours ago
-    isRead: false,
-  },
-  {
-    id: 3,
-    type: "system",
-    title: "Your project 'AI Chatbot' has been approved!",
-    description: "You can now start assembling your team and resources.",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24), // 1 day ago
-    isRead: true,
-  },
-  {
-    id: 4,
-    type: "project",
-    title: "Comment on your issue in 'Data-Visualizer'",
-    description:
-      "'jane_doe' replied: 'I think I have a fix for this. Pushing now.'",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 48), // 2 days ago
-    isRead: true,
-  },
-  {
-    id: 5,
-    type: "event",
-    title: "Feedback requested for 'CodeFest 2024'",
-    description: "Please share your thoughts on the event to help us improve.",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 72), // 3 days ago
-    isRead: false,
-  },
-  {
-    id: 6,
-    type: "project",
-    title: "Comment on your issue in 'Data-Visualizer'",
-    description:
-      "'jane_doe' replied: 'I think I have a fix for this. Pushing now.'",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 48), // 2 days ago
-    isRead: true,
-  },
-];
+// Match your backend response structure
+interface NotificationItem {
+  title: string;
+  message: string;
+  type: string;
+  to_email: string;
+  project_id: string;
+  from_email: string;
+  read_status: boolean;
+  created_at: string // Firestore timestamp
+}
 
-// --- Helper to get an icon based on notification type ---
-const getIconForType = (type: any) => {
+const getIconForType = (type: string) => {
   switch (type) {
     case "project":
+    case "approval":
       return <FolderGit2 className="text-blue-300" size={24} />;
     case "event":
+    case "admin":
       return <CalendarClock className="text-green-300" size={24} />;
-    case "system":
-      return <Bell className="text-yellow-300" size={24} />;
+    case "info":
     default:
-      return <Bell className="text-gray-400" size={24} />;
+      return <Bell className="text-yellow-300" size={24} />;
   }
 };
 
-const NotificationItem = ({ notification, onClick }: any) => {
+const NotificationItem = ({ 
+  notification, 
+  onRead 
+}: { 
+  notification: NotificationItem; 
+  onRead: () => void; 
+}) => {
+  const timestamp = new Date(notification.created_at);
+  
   return (
     <div
-      onClick={onClick}
+      onClick={onRead}
       className={`flex items-start p-4 border-b border-[#254b80] last:border-b-0 cursor-pointer transition-colors duration-200 ${
-        notification.isRead
+        notification.read_status
           ? "hover:bg-[#112244]"
           : "bg-[#112244]/50 hover:bg-[#112244]"
       }`}
     >
       <div className="relative flex-shrink-0 mr-4 mt-1">
         {getIconForType(notification.type)}
-        {!notification.isRead && (
+        {!notification.read_status && (
           <span className="absolute -top-1 -right-1 flex h-3 w-3">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
             <span className="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
@@ -97,35 +64,59 @@ const NotificationItem = ({ notification, onClick }: any) => {
       <div className="flex-grow">
         <p
           className={`font-semibold ${
-            notification.isRead ? "text-gray-300" : "text-white"
+            notification.read_status ? "text-gray-300" : "text-white"
           }`}
         >
           {notification.title}
         </p>
-        <p className="text-sm text-gray-400 mt-1">{notification.description}</p>
+        <p className="text-sm text-gray-400 mt-1">{notification.message}</p>
         <p className="text-xs text-blue-300/70 mt-2">
-          {formatDistanceToNow(new Date(notification.timestamp), {
-            addSuffix: true,
-          })}
+          {formatDistanceToNow(timestamp, { addSuffix: true })}
         </p>
       </div>
     </div>
   );
 };
 
-// --- The Main Notification Component ---
-const Notification = ({ onClose }: any) => {
-  const [notifications, setNotifications] = useState(initialNotifications);
+const Notification = ({ onClose }: { onClose: () => void }) => {
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const handleNotificationClick = (id: any) => {
-    setNotifications(
-      notifications.map((n) => (n.id === id ? { ...n, isRead: true } : n))
-    );
+  const fetchNotifications = async () => {
+    try {
+      const baseUrl = import.meta.env.DEV ? "http://127.0.0.1:5000" : "";
+      const res = await fetch(`${baseUrl}/api/notifications/get-notifications`, {
+        credentials: "include",
+      });
+
+      if (!res.ok) throw new Error("Failed to fetch");
+
+      const data = await res.json();
+      setNotifications(data.notifications || []);
+    } catch (err) {
+      console.error("Fetch error:", err);
+      setNotifications([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // For now, just mark as read in UI (you can add PUT request later if needed)
+  const handleNotificationClick = (index: number) => {
+    const updated = [...notifications];
+    updated[index] = { ...updated[index], read_status: true };
+    setNotifications(updated);
+    // TODO: Optionally call PUT /mark-read/:id
   };
 
   const handleMarkAllAsRead = () => {
-    setNotifications(notifications.map((n) => ({ ...n, isRead: true })));
+    setNotifications(notifs => notifs.map(n => ({ ...n, read_status: true })));
+    // TODO: Optionally call POST /mark-all-read
   };
+
+  useEffect(() => {
+    fetchNotifications();
+  }, []);
 
   return (
     <>
@@ -153,15 +144,18 @@ const Notification = ({ onClose }: any) => {
             </div>
           </div>
 
-          {/* Notifications List */}
           <div className="flex-grow w-full bg-[#0a1a33] rounded-b-3xl overflow-y-auto">
-            {notifications.length > 0 ? (
+            {loading ? (
+              <div className="flex items-center justify-center h-full text-white">
+                Loading notifications...
+              </div>
+            ) : notifications.length > 0 ? (
               <div className="p-4">
-                {notifications.map((notification) => (
+                {notifications.map((notif, idx) => (
                   <NotificationItem
-                    key={notification.id}
-                    notification={notification}
-                    onClick={() => handleNotificationClick(notification.id)}
+                    key={idx}
+                    notification={notif}
+                    onRead={() => handleNotificationClick(idx)}
                   />
                 ))}
               </div>

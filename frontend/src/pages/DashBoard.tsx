@@ -176,7 +176,7 @@ export default function DashboardPage() {
               <StatCard
                 icon={Coins}
                 label="Memo Tokens"
-                value={data.memo_Token}
+                value={data.memo_tokens}
                 colorClass="text-amber-400"
               />
             </div>
