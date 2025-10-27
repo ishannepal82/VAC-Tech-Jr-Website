@@ -757,12 +757,12 @@ const updateProject = (
   projectId: string,
   updates: Partial<typeof initialFormState | { is_completed: boolean }>
 ) => {
-  return apiCall(`/update/${projectId}`, {
-    method: "PATCH",
+  return apiCall(`/edit-project/${projectId}`, {
+    method: "PUT",
     body: JSON.stringify(updates),
   });
 };
 
 const deleteProject = (projectId: string) => {
-  return apiCall(`/delete/${projectId}`, { method: "DELETE" });
+  return apiCall(`/delete-project/${projectId}`, { method: "DELETE" , credentials: "include"});
 };

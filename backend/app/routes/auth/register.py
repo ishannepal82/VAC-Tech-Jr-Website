@@ -32,9 +32,10 @@ def register_user():
         user_ref.set({
             'email': email,
             'name': username,
-            'role': 'president',
+            'role': 'President',
             'rank': 'Hacker',
             'points': 0,
+            "is_admin": True,
             'committee': 'HOD',
             'memo_tokens': 0
         })

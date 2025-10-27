@@ -2,7 +2,7 @@ import { Search, Filter, ArrowRight, Gem } from "lucide-react";
 import { Link } from "react-router-dom";
 import CountUp from "react-countup";
 import { useEffect, useState } from "react";
-
+import { toast } from "sonner";
 // --- IMPORTANT: Update your Project type to match the new API response ---
 // You should have this in a separate file like `src/data/projects.ts`
 export interface Project {
@@ -94,20 +94,20 @@ export default function ProjectsSection() {
 
   const handleFetch = async () => {
     try {
-      const res = await fetch("http://127.0.0.1:5000/api/projects/projects");
+      const baseUrl = "http://127.0.0.1:5000";
+      const res = await fetch(`${baseUrl}/api/projects/get-approved-projects`);
+
       if (!res.ok) {
         console.error("Error Fetching Data:", res);
+        if (res.status === 400) {
+          toast.error("You are not allowed to join in the project.");
+        }
         return;
       }
       const data = await res.json();
       // Use the updated Project type for type safety
       const projects: Project[] = data.projects;
 
-      // This logic will now work correctly.
-      // Since 'is_completed' is missing from the API, project.is_completed will be 'undefined'.
-      // 'undefined === true' is false, so 'completed_projects' will be empty.
-      // 'undefined !== true' is true, so 'available_projects' will contain all projects.
-      // **Once you add `is_completed` back to your API, this will automatically work as intended.**
       const completed = projects.filter(
         (project) => project.is_completed === true
       );

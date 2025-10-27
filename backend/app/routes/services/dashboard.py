@@ -16,13 +16,11 @@ def get_dashboard_info():
         user_doc = user_ref.get()
         
         is_admin = user['is_admin']
-        role = user.get('role', 'member')
-        
-
+    
         if not user_doc.exists:
             return jsonify({'msg': 'User not found'}), 404
         user_data = user_doc.to_dict()
-
+        role = user_data.get('role', None)
         user_info = {
             **user_data,
             'is_admin': is_admin,
