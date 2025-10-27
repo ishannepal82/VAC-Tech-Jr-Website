@@ -3,6 +3,7 @@ import {
   ArrowBigRightDash,
   Bell,
   FolderGit2,
+  CircleX,
   CalendarClock,
   CheckCheck,
 } from "lucide-react";
@@ -17,7 +18,7 @@ interface NotificationItem {
   project_id: string;
   from_email: string;
   read_status: boolean;
-  created_at: string // Firestore timestamp
+  created_at: string; // Firestore timestamp
 }
 
 const getIconForType = (type: string) => {
@@ -34,15 +35,15 @@ const getIconForType = (type: string) => {
   }
 };
 
-const NotificationItem = ({ 
-  notification, 
-  onRead 
-}: { 
-  notification: NotificationItem; 
-  onRead: () => void; 
+const NotificationItem = ({
+  notification,
+  onRead,
+}: {
+  notification: NotificationItem;
+  onRead: () => void;
 }) => {
   const timestamp = new Date(notification.created_at);
-  
+
   return (
     <div
       onClick={onRead}
@@ -74,6 +75,16 @@ const NotificationItem = ({
           {formatDistanceToNow(timestamp, { addSuffix: true })}
         </p>
       </div>
+      {notification.type === "approval" && (
+        <div className="flex gap-4 items-center">
+          <button className="text-white bg-green-800 hover:bg-green-700 p-2 rounded">
+            <CheckCheck size={24} />
+          </button>
+          <button className="text-white bg-red-800 hover:bg-red-600 p-2 rounded">
+            <CircleX size={24} />
+          </button>
+        </div>
+      )}
     </div>
   );
 };
@@ -85,9 +96,12 @@ const Notification = ({ onClose }: { onClose: () => void }) => {
   const fetchNotifications = async () => {
     try {
       const baseUrl = import.meta.env.DEV ? "http://127.0.0.1:5000" : "";
-      const res = await fetch(`${baseUrl}/api/notifications/get-notifications`, {
-        credentials: "include",
-      });
+      const res = await fetch(
+        `${baseUrl}/api/notifications/get-notifications`,
+        {
+          credentials: "include",
+        }
+      );
 
       if (!res.ok) throw new Error("Failed to fetch");
 
@@ -110,7 +124,9 @@ const Notification = ({ onClose }: { onClose: () => void }) => {
   };
 
   const handleMarkAllAsRead = () => {
-    setNotifications(notifs => notifs.map(n => ({ ...n, read_status: true })));
+    setNotifications((notifs) =>
+      notifs.map((n) => ({ ...n, read_status: true }))
+    );
     // TODO: Optionally call POST /mark-all-read
   };
 

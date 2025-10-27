@@ -191,15 +191,13 @@ export default function WallOfLegends() {
                     className="bg-[#1a2f55] p-4 rounded-lg flex items-center justify-between hover:bg-[#254272] transition-colors"
                   >
                     <div className="flex items-center gap-4">
-                      <span className="font-bold text-xl text-gray-400 w-8 text-center">
-                        {member?.rank}
-                      </span>
                       <img
                         src={member?.avatar}
                         alt={member.name}
                         className="w-12 h-12 rounded-full"
                       />
                       <p className="font-semibold text-white">{member.name}</p>
+                      <MemberRankBadge rank={getRank(member.rank)} />
                     </div>
                     <p className="font-bold text-lg text-[#9cc9ff]">
                       <CountUp end={member.points} duration={2} /> pts

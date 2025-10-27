@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Github, Calendar, Award, ChevronLeft } from "lucide-react";
 import type { Project } from "../data/projects";
+import { toast } from "sonner";
 
 export default function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -51,12 +52,12 @@ export default function ProjectDetailPage() {
         throw new Error(data.message || "Failed to join project");
       }
 
-      setJoinMessage("✅ Successfully requested to join the project!");
+      toast.success(" Successfully requested to join the project!");
       // Optionally refetch project to update member list
       fetchProjectById(id);
     } catch (err: any) {
       console.error("Join project error:", err);
-      setJoinMessage(`❌ ${err.message}`);
+      toast.error(` ${err.message}`);
     } finally {
       setJoining(false);
     }
@@ -204,9 +205,7 @@ export default function ProjectDetailPage() {
                     {joining ? "Joining..." : "Join Project"}
                   </button>
                   {joinMessage && (
-                    <p className="text-sm mt-2 text-[#9cc9ff]">
-                      {joinMessage}
-                    </p>
+                    <p className="text-sm mt-2 text-[#9cc9ff]">{joinMessage}</p>
                   )}
                 </>
               ) : (
