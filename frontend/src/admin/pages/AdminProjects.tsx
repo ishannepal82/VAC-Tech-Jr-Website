@@ -25,6 +25,40 @@ const initialFormState = {
 };
 
 export default function AdminProjects() {
+  // its just for testing if member section worked or not--------------------------------------
+  const [members, setMembers] = useState([
+    { name: "Rishab Thapa" },
+    { name: "Ishan Nepal" },
+    { name: "Shishir Khatri" },
+  ]);
+
+  const [newMemberName, setNewMemberName] = useState("");
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [removeIndex, setRemoveIndex] = useState<null | number>(null);
+
+  // Add member
+  const handleAddMember = () => {
+    if (newMemberName.trim()) {
+      setMembers((prev) => [...prev, { name: newMemberName.trim() }]);
+      setNewMemberName("");
+      setShowAddModal(false);
+      toast.success("Member added successfully");
+    }
+  };
+
+  // Confirm remove member
+  const handleRemoveMember = (index: number) => {
+    setRemoveIndex(index);
+  };
+
+  const confirmRemoveMember = () => {
+    if (removeIndex !== null) {
+      setMembers((prev) => prev.filter((_, i) => i !== removeIndex));
+      setRemoveIndex(null);
+      toast.success("Member removed successfully");
+    }
+  };
+  //------------------------------------------------------------
   const [approvalRequests, setApprovalRequests] = useState<Project[]>([]);
   const [approvedProjects, setApprovedProjects] = useState<Project[]>([]);
   const [completedProjects, setCompletedProjects] = useState<Project[]>([]);
@@ -604,6 +638,117 @@ export default function AdminProjects() {
                 className="w-full bg-[#0f172a] border border-gray-600 rounded-lg py-2 px-4 text-white"
               />
             </div>
+          </div>
+          <div className="space-y-3">
+            <label className="block text-sm font-medium text-gray-400 mb-1">
+              Team Members
+            </label>
+
+            <div className="bg-[#0f172a] border border-gray-600 rounded-lg py-3 px-4 text-white">
+              {members.length === 0 ? (
+                <p className="text-gray-500 text-sm">No members added yet.</p>
+              ) : (
+                <ul className="space-y-2">
+                  {members.map((member, i) => (
+                    <li
+                      key={i}
+                      className="flex justify-between items-center bg-[#1e293b] px-3 py-2 rounded-lg"
+                    >
+                      <span>{member.name}</span>
+                      <button
+                        onClick={() => handleRemoveMember(i)}
+                        className="text-red-400 hover:text-red-500 transition"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              <button
+                onClick={() => setShowAddModal(true)}
+                className="flex items-center gap-2 mt-3  bg-[#0a1a59] hover:bg-[#0a1a89] transition text-white px-4 py-2 rounded-lg"
+              >
+                <Plus size={18} /> Add Member
+              </button>
+            </div>
+
+            {/* Add Member Modal */}
+            {showAddModal && (
+              <div className="fixed inset-0 flex items-center justify-center bg-black/50">
+                <div className="bg-[#0f172a] border border-gray-600 rounded-xl p-6 w-80 text-white shadow-lg">
+                  <h2 className="text-lg font-semibold mb-3">Add New Member</h2>
+                  <input
+                    type="text"
+                    placeholder="Enter member name"
+                    value={newMemberName}
+                    onChange={(e) => setNewMemberName(e.target.value)}
+                    className="w-full bg-[#1e293b] border border-gray-500 rounded-lg px-3 py-2 mb-4 text-white outline-none focus:border-blue-500"
+                  />
+                  <div className="flex justify-end gap-3">
+                    <button
+                      onClick={() => setShowAddModal(false)}
+                      className="px-4 py-2 rounded-lg bg-gray-600 hover:bg-gray-500 transition"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleAddMember}
+                      className="px-4 py-2 rounded-lg bg-[#0a1a33] hover:bg-[#0a1a69] transition"
+                    >
+                      Add
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* conforming removal */}
+            {removeIndex !== null && (
+              <div className="fixed inset-0 flex items-center justify-center bg-black/50">
+                <div className="bg-[#0f172a] border border-gray-600 rounded-xl p-6 w-80 text-white shadow-lg">
+                  <h2 className="text-lg font-semibold mb-3">Remove Member</h2>
+                  <p className="text-sm text-gray-300 mb-4">
+                    Are you sure you want to remove{" "}
+                    <span className="font-semibold text-red-400">
+                      {members[removeIndex].name}
+                    </span>
+                    ?
+                  </p>
+                  <div className="flex justify-end gap-3">
+                    <button
+                      onClick={() => setRemoveIndex(null)}
+                      className="px-4 py-2 rounded-lg bg-gray-600 hover:bg-gray-500 transition"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={confirmRemoveMember}
+                      className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 transition"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="flex justify-end gap-4 pt-6">
+            <button
+              type="button"
+              onClick={() => setApprovalModalOpen(false)}
+              className="px-6 py-2 rounded-lg text-gray-300 hover:bg-gray-600 transition"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-6 py-2 rounded-lg bg-green-600 hover:bg-green-700 font-semibold transition"
+            >
+              {selectedProject?.is_approved ? "Save Changes" : "Approve & Save"}
+            </button>
           </div>
           <div className="flex justify-end gap-4 pt-6">
             <button
