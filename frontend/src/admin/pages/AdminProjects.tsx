@@ -15,7 +15,6 @@ import Tabs from "../components/Tabs";
 import Modal from "../components/Modal";
 import { toast } from "sonner";
 
-// Define the shape of our form data and its initial state
 const initialFormState = {
   title: "",
   description: "",
@@ -25,20 +24,16 @@ const initialFormState = {
   required_members: 1,
 };
 
-// --- MAIN COMPONENT ---
 export default function AdminProjects() {
-  // State for project lists
   const [approvalRequests, setApprovalRequests] = useState<Project[]>([]);
   const [approvedProjects, setApprovedProjects] = useState<Project[]>([]);
   const [completedProjects, setCompletedProjects] = useState<Project[]>([]);
 
-  // State for modals and selected project
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isApprovalModalOpen, setApprovalModalOpen] = useState(false);
   const [isRejectModalOpen, setRejectModalOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
 
-  // State for form inputs
   const [addFormData, setAddFormData] = useState(initialFormState);
   const [editFormData, setEditFormData] = useState(initialFormState);
   const [rejectionReason, setRejectionReason] = useState("");
@@ -764,5 +759,8 @@ const updateProject = (
 };
 
 const deleteProject = (projectId: string) => {
-  return apiCall(`/delete-project/${projectId}`, { method: "DELETE" , credentials: "include"});
+  return apiCall(`/delete-project/${projectId}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
 };
