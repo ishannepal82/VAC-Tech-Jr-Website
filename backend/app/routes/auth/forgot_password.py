@@ -2,7 +2,7 @@ from flask import Blueprint, request, jsonify
 import requests
 from app.routes.utils.user_verifier_func import get_current_user
 from app.routes.auth.bp import auth_bp
-FIREBASE_API_KEY = "AIzaSyC5WmyHf2O-7RVObHDpq_mH7AYApepazOM"
+FIREBASE_API_KEY = "AIzaSyCSY46pA55Y6JBzlOJDkVIol66lqAM9g3w"
 
 @auth_bp.route('/forgotpassword', methods=['POST'])
 def forgot_password():

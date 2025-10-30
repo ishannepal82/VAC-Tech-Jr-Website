@@ -5,27 +5,19 @@ events_bp = Blueprint('events', __name__)
 @events_bp.route('/events')
 def get_all_events():
     try:
+        user = get_current_user()
+        if not user:
+            return jsonify ({'msg': 'Unauthorized User'}), 401
+        
         db = current_app.config['db']
         events_ref = db.collection('events')
-
         events_list = [{'id': doc.id, **doc.to_dict()} for doc in events_ref.stream()]
 
-        events_by_date = {}
-        for ev in events_list:
-            date_key = ev.get('date')
-            if not date_key:
-                continue
-            if date_key not in events_by_date:
-                events_by_date[date_key] = []
-
-            events_by_date[date_key].append({
-                'id': ev['id'],
-                'title': ev.get('title') or ev.get('Title'),
-                'desc': ev.get('description'),
-                'color': ev.get('color', 'yellow')
-            })
-
-        return jsonify(events_by_date), 200
+        events_by_date = []
+        for events in events_list:
+            events_by_date.append(events)
+        
+        return jsonify({'msg':'Sucessfully fetched all events', 'events': events_by_date}), 200
 
     except Exception as e:
         return jsonify({'msg': 'Internal Server error', 'error': str(e)}), 500
@@ -50,26 +42,29 @@ def get_event_by_id(id):
 def add_event():
     try:
         db = current_app.config['db']
-        data = request.json
-
-        user = get_current_user()
-        if not user.get('is_admin', False) or not user:
-            return jsonify ({'msg': 'Unauthorized User'})
+        data = request.get_json()
 
         if not data:
             return jsonify({"error": "No data provided"}), 400
+
+        user = get_current_user()
+        if not user or not  user.get('is_admin', False):
+            return jsonify ({'msg': 'Unauthorized User'})
+
         
-        required_fields = ["title", "description", "date",  "color"]
+        required_fields = ["name", "description", "date",  "venue", "time", "date"]
         for field in required_fields:
             if field not in data:
                 return jsonify({"error": f"Missing field: {field}"}), 400
         
         doc_ref = db.collection('events').document() 
         doc_ref.set({
-            "title": data["title"],
-            "description": data["description"],
-            "date": data["date"],
-            "color": data["color"]
+            "name": data.get("name"),
+            "description": data.get('description'),
+            "date": data.get('date'),
+            "time": data.get('time'),
+            "venue": data.get('venue'),
+            "status": "upcoming"
         })
 
         return jsonify({'msg':'Sucessfully created the event'}), 201
@@ -83,28 +78,47 @@ def edit_event(id):
         db = current_app.config['db']
         data = request.json
 
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+        
         user = get_current_user()
         if not user.get('is_admin', False) or not user:
             return jsonify ({'msg': 'Unauthorized User'})
 
-        if not data:
-            return jsonify({"error": "No data provided"}), 400
+        updated_info = {}
         
-        required_fields = ["title", "description", "date",  "color"]
-        for field in required_fields:
-            if field not in data:
-                return jsonify({"error": f"Missing field: {field}"}), 400
+        update_fields = ["name", "description", "date", "venue", "time", "status"]
+        for field in update_fields:
+            if field in data:
+                updated_info[field] = data[field]
+               
+        doc_ref = db.collection('events').document(id)
+        event_doc = doc_ref.get() 
+        if not event_doc.exists:
+            return jsonify({'msg': 'Missing event, event might have been deleted'}), 404
         
-        doc_ref = db.collection('events').document() 
-        doc_ref.set({
-            "title": data["title"],
-            "description": data["description"],
-            "date": data["date"],
-            "color": data["color"]
-        })
-
-        return jsonify({'msg':'Sucessfully created the event'}), 201
+        doc_ref.update(updated_info)
+        return jsonify({'msg':'Sucessfully updated the event'}), 200
     
     except Exception as e:
         return jsonify({'msg':'Internal Server error', 'error': str(e)})
 
+@events_bp.route('/delete-event/<id>', methods=["DELETE"])
+def delete_event(id):
+    try:
+        db = current_app.config['db']
+        
+        user = get_current_user()
+        if not user or not user.get('is_admin', False):
+            return jsonify({'msg': 'Unauthorized User'}), 401
+
+        doc_ref = db.collection('events').document(id)
+        event_doc = doc_ref.get()
+        if not event_doc.exists:
+            return jsonify({'msg': 'Event not found or already deleted'}), 404
+
+        doc_ref.delete()
+        return jsonify({'msg': 'Successfully deleted the event'}), 200
+
+    except Exception as e:
+        return jsonify({'msg': 'Internal Server error', 'error': str(e)}), 500

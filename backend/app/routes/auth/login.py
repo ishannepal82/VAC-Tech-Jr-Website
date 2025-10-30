@@ -4,7 +4,7 @@ import datetime
 from firebase_admin import auth
 from app.routes.auth.bp import auth_bp
 
-FIREBASE_API_KEY = "AIzaSyC5WmyHf2O-7RVObHDpq_mH7AYApepazOM"
+FIREBASE_API_KEY = "AIzaSyCSY46pA55Y6JBzlOJDkVIol66lqAM9g3w"
 
 @auth_bp.route('/login', methods=['POST'])
 def login_user():

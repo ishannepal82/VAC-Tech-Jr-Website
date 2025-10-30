@@ -33,7 +33,7 @@ def create_app():
 
     '''Registering Services Blueprint'''
     from app.routes.services.manage_events import events_bp
-    app.register_blueprint(events_bp, url_prefix='/api')
+    app.register_blueprint(events_bp, url_prefix='/api/events')
 
     from app.routes.services.leaderboard import leaderboard_bp
     app.register_blueprint(leaderboard_bp, url_prefix='/api/leaderboard')

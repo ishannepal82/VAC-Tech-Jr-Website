@@ -10,6 +10,7 @@ def get_current_user():
     """
     try:
         # The cookie name your frontend sets (adjust if needed)
+        print(request.cookies)
         session_cookie = request.cookies.get('session')
         print(session_cookie)
         if not session_cookie:
