@@ -7,7 +7,7 @@ import {
   Clock,
   MapPin,
   Star,
-  BarChart2,
+
 } from "lucide-react";
 import Tabs from "../components/Tabs";
 import Modal from "../components/Modal";
@@ -24,7 +24,7 @@ const mockEvents = [
     banner: "",
     status: "Upcoming",
     featured: true,
-    registrations: 120,
+
   },
   {
     id: 2,
@@ -36,7 +36,7 @@ const mockEvents = [
     banner: "",
     status: "Completed",
     featured: false,
-    registrations: 45,
+
   },
   {
     id: 3,
@@ -48,7 +48,7 @@ const mockEvents = [
     banner: "",
     status: "Upcoming",
     featured: false,
-    registrations: 250,
+
   },
 ];
 
@@ -88,10 +88,7 @@ export default function AdminEvents() {
         </span>
       </div>
       <p className="text-gray-300 text-sm">{event.description}</p>
-      <div className="flex items-center gap-2 text-sm text-green-400 pt-2">
-        <BarChart2 size={16} />
-        <span>{event.registrations} Registrations</span>
-      </div>
+   
     </div>
   );
 
