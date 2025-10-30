@@ -6,39 +6,52 @@ import {
   PhoneIcon,
   Twitter,
 } from "lucide-react";
+import { NavLink } from "react-router-dom";
 
-const Footer = () => {
+const Footer = ({onLinkClick}:any) => {
+  const linkClassName =
+    "text-sm text-blue-100 hover:text-white transition-colors";
+
+  const handleClick = () => {
+    if (onLinkClick) {
+      onLinkClick();
+    }
+  };
   return (
-    <footer className="bg-[#192f56] pt-20 text-white, md:py-4 md:px-13 lg:px-14 border-t-2 border-blue-100 px-6 ">
-      <div className="flex justify-between py-6">
-        <div className="max-w-md  ">
-          <h2 className="text-2xl font-bold text-blue-300 mb-4">About us</h2>
 
-          <p className="text-blue-100 text-sm ">
-            Your Pathway to Innovation and Success.Empowering students with
-            knowledge, skills, and confidence to shape the future.{" "}
+    <footer className="bg-[#192f56] text-white border-t-2 border-blue-100 px-6 py-12 md:px-12 md:py-16 lg:px-20">
+
+      <div className="flex flex-col md:flex-row justify-between gap-10 md:gap-6">
+
+      
+        <div className="max-w-sm">
+          <h2 className="text-2xl font-bold text-blue-300 mb-4">About us</h2>
+          <p className="text-blue-100 text-sm">
+            Your Pathway to Innovation and Success. Empowering students with
+            knowledge, skills, and confidence to shape the future.
           </p>
 
-          <div className="gap-x-4 pt-4">
+          <div className="pt-8">
             <h2 className="text-xl font-medium text-blue-100 mb-4">Connect</h2>
-            <div className="flex flex-row items-center gap-x-3 mb-3">
+            <div className="flex flex-row items-center gap-x-4">
+             
               <a
-                href=" "
-                className="hover: underline bg-black/80 text-blue-100 p-2 rounded-full shadow text-blue-400="
+                href="#"
+                className="bg-black/40 text-blue-300 p-2 rounded-full shadow hover:bg-black/60 transition-colors duration-300"
               >
-                <Facebook />
+                <Facebook size={20} />
               </a>
               <a
-                href=" "
-                className="hover: underline  bg-black/80 text-blue-100 p-2 rounded-full shadow text-blue-400="
+                href="#"
+                className="bg-black/40 text-blue-300 p-2 rounded-full shadow hover:bg-black/60 transition-colors duration-300"
               >
-                <Twitter />
+                <Twitter size={20} />
               </a>
               <a
-                href=" "
-                className="hover: underline bg-black/80 text-blue-100 p-2 rounded-full shadow text-blue-400="
+                href="#"
+                className="bg-black/40 text-blue-300 p-2 rounded-full shadow hover:bg-black/60 transition-colors duration-300"
               >
-                <Instagram />
+                <Instagram size={20} />
               </a>
             </div>
           </div>
@@ -46,108 +59,96 @@ const Footer = () => {
 
         <div>
           <h2 className="text-xl font-medium text-blue-100 mb-4">
-            Quick links{" "}
+            Quick links
           </h2>
-          <ul>
+         
+          <ul className="space-y-2">
             <li>
-              <a
-                href=" "
-                className=" text-sm text-size-3  text-blue-100  hover:text-white/490 focus:text-blue "
-              >
-                {" "}
+
+              <NavLink to="/home" className={linkClassName} onClick={handleClick}>
                 Home
+              </NavLink>
+            </li>
+            <li>
+              <NavLink to="/events" className={linkClassName} onClick={handleClick}>
+                Events
+                </NavLink>
+            </li>
+            <li>
+              <NavLink to="/projectsSection" className={linkClassName} onClick={handleClick}>
+                Projects
+                </NavLink>
+            </li>
+            <li>
+              <NavLink to="/community" className={linkClassName} onClick={handleClick}>
+                Community
+                </NavLink>
+            </li>
+          </ul>
+        </div>
+
+        <div>
+          <h2 className="text-xl font-medium text-blue-100 mb-4">Resources</h2>
+          <ul className="space-y-2">
+        
+            <li>
+              <NavLink to="/home#about" className={linkClassName} onClick={handleClick}>
+              About Us</NavLink>
+            </li>
+            <li>
+              <a href="#" className="text-sm text-blue-100 hover:text-white transition-colors">
+                Security
               </a>
             </li>
             <li>
-              <a
-                href=" "
-                className="text-sm text-size-3  text-blue-100 hover:text-white/490 focus:text-blue "
-              >
-                {" "}
-                service
+              <a href="#" className="text-sm text-blue-100 hover:text-white transition-colors">
+                Help Center
               </a>
             </li>
             <li>
-              <a
-                href=" "
-                className="text-sm text-size-3   text-blue-100 hover:text-white/490 focus:text-blue"
-              >
-                {" "}
-                contact{" "}
-              </a>
-            </li>
-            <li>
-              <a
-                href=" "
-                className="text-sm text-size-3   text-blue-100 hover:text-white/490 focus:text-blue"
-              >
-                {" "}
-                about us
+              <a href="#" className="text-sm text-blue-100 hover:text-white transition-colors">
+                Terms of Use
               </a>
             </li>
           </ul>
         </div>
-        <div>
-          <h2 className="text-xl font-medium text-blue-100 mb-4">Resources</h2>
-          <div className=" gap-x-3 py-1.5">
-            <ul>
-              <li className="text-sm cursor-pointer text-blue-100 px-1 hover:text-white/490 focus:text-blue">
-                {" "}
-                Support
-              </li>
-              <li className="text-sm cursor-pointer text-blue-100 px-1 hover:text-white/490 focus:text-blue">
-                {" "}
-                Security
-              </li>
-              <li className="text-sm cursor-pointer text-blue-100 px-1 hover:text-white/490 focus:text-blue ">
-                {" "}
-                Help center
-              </li>
-              <li className="text-sm cursor-pointer text-blue-100 px-1 hover:text-white/490 focus:text-blue">
-                {" "}
-                Terms of use
-              </li>
-            </ul>
-          </div>
-        </div>
 
+     
         <div>
           <h2 className="text-xl font-medium text-blue-100 mb-4">Contact</h2>
-          <ul>
-            <div className="flex gap-x-3 text-blue-100 py-1.5 text-sm">
-              {" "}
-              <PhoneIcon className="text-blue-100" /> 025-584505
-              <a href=" " className=" text-blue-100">
-                {" "}
-              </a>
-            </div>
-            <div className="flex gap-3 text-blue-100 py-1.5 text-sm">
-              {" "}
-              <Mail className="text-blue-100" /> official.vactechjr@gmail.com
-              <a href=" " className=" text-blue-100">
-                {" "}
-              </a>
-            </div>
-            <div className="flex gap-3 text-blue-100 py-1.5 text-sm">
-              {" "}
-              <MapPinned className="text-blue-100" /> Aaitbare-itahari, sunsari
-              <a href=" " className=" text-blue-100">
-                {" "}
-              </a>
-            </div>
+         
+          <ul className="space-y-3">
+
+            <li className="flex items-start gap-x-3 text-blue-100 text-sm">
+              <PhoneIcon className="text-blue-100 mt-0.5" size={18} />
+              <span>025-584505</span>
+            </li>
+            <li className="flex items-start gap-x-3 text-blue-100 text-sm">
+              <Mail className="text-blue-100 mt-0.5" size={18} />
+              <span>official.vactechjr@gmail.com</span>
+            </li>
+            <li className="flex items-start gap-x-3 text-blue-100 text-sm">
+              <MapPinned className="text-blue-100 mt-0.5" size={18} />
+              <span>Aaitbare-itahari, Sunsari</span>
+            </li>
           </ul>
         </div>
       </div>
 
-      <div className="border-t border-blue-100 my-5" />
 
+      <div className="border-t border-blue-100/50 my-8" />
+
+     
       <div className="flex flex-col md:flex-row justify-between items-center text-center gap-4">
-        <p className="text-blue-100 ">@2024 Vac Tec jr. All Right Reserved.</p>
-        <div className="flex items-centre gap-4  text-sm text-blue-100 ">
-          <a href="/terms" className="hover:text-black-700 underline">
+        <p className="text-sm text-blue-100/80">
+          © {new Date().getFullYear()} Vac Tec Jr. All Rights Reserved.
+        </p>
+        <div className="flex items-center gap-6 text-sm text-blue-100/80">
+      
+          <a href="/terms" className="hover:text-white underline">
             Terms & Conditions
           </a>
-          <a href="/privacy" className="hover:text-black-700 underline">
+          <a href="/privacy" className="hover:text-white underline">
             Privacy Policy
           </a>
         </div>
@@ -155,4 +156,5 @@ const Footer = () => {
     </footer>
   );
 };
+
 export default Footer;

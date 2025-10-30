@@ -140,10 +140,10 @@ export default function AdminAbout() {
             className="w-full bg-[#0f172a] border border-gray-600 rounded-lg py-2 px-4 text-white min-h-[100px]"
           />
           <input
-            type="text"
+            type="file"
             placeholder="Image URL"
             defaultValue={editingMember?.imageUrl}
-            className="w-full bg-[#0f172a] border border-gray-600 rounded-lg py-2 px-4 text-white"
+            className="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-[#2563eb] file:text-white hover:file:bg-[#1d4ed8]"
           />
           <input
             type="email"
