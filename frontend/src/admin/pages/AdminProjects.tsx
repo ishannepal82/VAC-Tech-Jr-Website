@@ -257,9 +257,9 @@ export default function AdminProjects() {
       ) : (
         <Tabs
           tabNames={[
-            "Approval Requests",
-            "Approved Projects",
-            "Completed Projects",
+            "Requests",
+            "Approved ",
+            "Completed ",
           ]}
         >
           {/* Tab 1: Approval Requests */}
@@ -750,21 +750,7 @@ export default function AdminProjects() {
               {selectedProject?.is_approved ? "Save Changes" : "Approve & Save"}
             </button>
           </div>
-          <div className="flex justify-end gap-4 pt-6">
-            <button
-              type="button"
-              onClick={() => setApprovalModalOpen(false)}
-              className="px-6 py-2 rounded-lg text-gray-300 hover:bg-gray-600 transition"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-6 py-2 rounded-lg bg-green-600 hover:bg-green-700 font-semibold transition"
-            >
-              {selectedProject?.is_approved ? "Save Changes" : "Approve & Save"}
-            </button>
-          </div>
+         
         </form>
       </Modal>
 
