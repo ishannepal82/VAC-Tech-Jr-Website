@@ -1,0 +1,228 @@
+// src/pages/ProjectDetailPage.tsx
+import { useEffect, useState } from "react";
+import { useParams, Link } from "react-router-dom";
+import { Github, Calendar, Award, ChevronLeft } from "lucide-react";
+import type { Project } from "../data/projects";
+import { toast } from "sonner";
+
+export default function ProjectDetailPage() {
+  const { id } = useParams<{ id: string }>();
+  const [project, setProject] = useState<Project | null>(null);
+  const [joining, setJoining] = useState(false);
+  const [joinMessage, setJoinMessage] = useState<string | null>(null);
+
+  // Fetch project details
+  const fetchProjectById = async (projectId: string | undefined) => {
+    if (!projectId) return;
+    try {
+      const res = await fetch(
+        `http://127.0.0.1:5000/api/projects/get-project/${projectId}`
+      );
+      if (!res.ok) throw new Error("Failed to fetch project");
+      const data = await res.json();
+      setProject(data.project);
+    } catch (e) {
+      console.error("Fetch error:", e);
+      setProject(null);
+    }
+  };
+
+  // 🔹 Join project handler
+  const joinProject = async () => {
+    if (!id) return;
+
+    setJoining(true);
+    setJoinMessage(null);
+
+    try {
+      const res = await fetch(
+        `http://127.0.0.1:5000/api/projects/join-project/${id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+        }
+      );
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || "Failed to join project");
+      }
+
+      toast.success(" Successfully requested to join the project!");
+      // Optionally refetch project to update member list
+      fetchProjectById(id);
+    } catch (err: any) {
+      console.error("Join project error:", err);
+      toast.error(` ${err.message}`);
+    } finally {
+      setJoining(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchProjectById(id);
+  }, [id]);
+
+  // Loading state
+  if (project === undefined) {
+    return (
+      <div className="h-screen w-full bg-[#0a1a33] text-white flex items-center justify-center">
+        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-white"></div>
+      </div>
+    );
+  }
+
+  // Not Found state
+  if (!project) {
+    return (
+      <div className="h-screen w-full bg-[#0a1a33] text-white flex items-center justify-center">
+        <h1 className="text-3xl font-bold">Project Not Found</h1>
+        <Link to="/projects" className="ml-4 text-[#9cc9ff] hover:underline">
+          Go Back
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen w-full bg-[#0a1a33] text-white font-poppins py-12 sm:py-20 px-4">
+      <div className="max-w-4xl mx-auto">
+        <Link
+          to="/projects"
+          className="inline-flex items-center gap-2 text-[#9cc9ff] hover:text-white mb-8 transition-colors"
+        >
+          <ChevronLeft size={20} />
+          Back to All Projects
+        </Link>
+
+        <div className="bg-[#102142] border-2 border-[#3a5a8a] rounded-2xl flex flex-col justify-between overflow-hidden min-h-[75vh]">
+          <div className="p-8 md:p-12">
+            <h1 className="text-4xl md:text-5xl font-extrabold text-[#9cc9ff] leading-tight">
+              {project.title}
+            </h1>
+            <p className="text-gray-400 mt-2 text-lg">by {project.author}</p>
+
+            <div className="flex flex-wrap gap-x-8 gap-y-4 my-8 border-y border-[#3a5a8a] py-6">
+              <div className="flex items-center gap-3">
+                <Calendar className="text-[#b3d9ff]" size={24} />
+                <div>
+                  <p className="text-gray-400 text-sm">Timeframe</p>
+                  <p className="text-white font-semibold">
+                    {project.project_timeframe}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <Award className="text-yellow-400" size={24} />
+                <div>
+                  <p className="text-gray-400 text-sm">Reward</p>
+                  <p className="text-white font-semibold">
+                    {project.points} Points
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <h2 className="text-2xl font-bold text-white mb-4">
+              About the Project
+            </h2>
+            <p className="text-gray-300 leading-relaxed text-base">
+              {project.description}
+            </p>
+
+            {project.technologies && project.technologies.length > 0 && (
+              <>
+                <h3 className="text-xl font-bold text-white mt-8 mb-4">
+                  Technology Stack
+                </h3>
+                <div className="flex flex-wrap gap-3">
+                  {project.technologies.map((tech) => (
+                    <span
+                      key={tech}
+                      className="bg-[#253961] text-[#9cc9ff] px-4 py-2 rounded-full font-medium text-sm"
+                    >
+                      {tech}
+                    </span>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+
+          <div className="bg-[#0a1a33]/60 p-6 border-t-2 border-[#3a5a8a] flex flex-col sm:flex-row items-center justify-between gap-6">
+            <div className="flex items-center gap-4">
+              <span className="text-gray-400 font-semibold text-lg flex-shrink-0">
+                Team:
+              </span>
+              <div className="flex -space-x-4">
+                {project.members.length > 0 ? (
+                  project.members.slice(0, 5).map((member, index) => (
+                    <div
+                      key={index}
+                      title={member.name}
+                      className="w-12 h-12 rounded-full bg-[#1a2f55] border-2 border-[#5ea4ff] flex items-center justify-center text-lg font-bold"
+                    >
+                      {member.avatarUrl ? (
+                        <img
+                          src={member.avatarUrl}
+                          alt={member.name}
+                          className="rounded-full"
+                        />
+                      ) : (
+                        member.name?.charAt(0).toUpperCase()
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <span className="text-gray-500 italic pl-4">
+                    Recruiting members...
+                  </span>
+                )}
+                {project.members.length > 5 && (
+                  <div className="w-12 h-12 rounded-full bg-[#0a1a33] border-2 border-[#5ea4ff] flex items-center justify-center text-sm font-bold">
+                    +{project.members.length - 5}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex flex-col items-center sm:items-end">
+              {project.is_completed !== true ? (
+                <>
+                  <button
+                    onClick={joinProject}
+                    disabled={joining}
+                    className={`${
+                      joining
+                        ? "bg-gray-500 cursor-not-allowed"
+                        : "bg-[#2563eb] hover:bg-[#1d4ed8]"
+                    } text-white px-8 py-3 rounded-full font-semibold text-lg transition w-full sm:w-auto`}
+                  >
+                    {joining ? "Joining..." : "Join Project"}
+                  </button>
+                  {joinMessage && (
+                    <p className="text-sm mt-2 text-[#9cc9ff]">{joinMessage}</p>
+                  )}
+                </>
+              ) : (
+                <a
+                  href={project.github || "#"}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center border border-[#b3d9ff] text-[#b3d9ff] hover:bg-[#1a2f55] px-8 py-3 rounded-full font-semibold text-lg transition w-full sm:w-auto"
+                >
+                  <Github size={20} className="mr-3" />
+                  View on GitHub
+                </a>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

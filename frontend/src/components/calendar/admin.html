@@ -1,0 +1,445 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>Calendar — Events</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./admin.css">
+</head>
+<body>
+    <div class="window">
+        <div class="title-bar">
+            <div class="dot red"></div><div class="dot yellow"></div><div class="dot green"></div>
+        </div>
+        <div class="app-wrapper">
+            <button class="hamburger" id="toggleSidebar" title="Toggle sidebar">
+                <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+            </button>
+            <button class="panel-toggle" id="toggleRight" title="Toggle event panel">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7" /></svg>
+            </button>
+
+            <div class="app" id="appGrid">
+                <aside class="sidebar">
+                    <div class="sidebar-content">
+                        <div class="year-row">
+                            <button class="ybtn-prev" id="prevYear">&lt;</button>
+                            <div class="year-label" id="yearLabel">2024</div>
+                            <button class="ybtn-next" id="nextYear">&gt;</button>
+                        </div>
+                        <ul class="months" id="monthList"></ul>
+                    </div>
+                </aside>
+                <section class="calendar">
+                    <p class="calendar-description">A quick overview of your upcoming events and schedules.</p>
+                    <div class="month-title" id="monthTitle">OCTOBER</div>
+                    <div class="dow">
+                        <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+                    </div>
+                    <div class="grid" id="grid"></div>
+                    <div class="actions">
+                        <button class="btn" id="addBtn">Add Event</button>
+                        <button class="btn secondary" id="removeBtn">Remove Event</button>
+                    </div>
+                </section>
+                <section class="events">
+                    <div class="events-content">
+                        <div class="e-title" id="eventsTitle">UPCOMING EVENTS</div>
+                        <div class="elist" id="eventList">
+                            <div class="no-events">Loading events...</div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Event Modal -->
+    <div class="overlay" id="addModal">
+        <div class="modal">
+            <h3>Add Event</h3>
+            <div class="muted" id="addDateLabel"></div>
+            <div class="form-row">
+                <label for="evName">Title</label>
+                <input type="text" id="evName" placeholder="Event title">
+            </div>
+            <div class="form-row">
+                <label for="evDesc">Description</label>
+                <textarea id="evDesc" placeholder="Details..."></textarea>
+            </div>
+            <div class="form-row">
+                <label>Color</label>
+                <div class="color-pills" id="colorPills"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn small secondary" id="cancelAdd">Cancel</button>
+                <button class="btn small" id="saveAdd">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Remove Event Modal -->
+    <div class="overlay" id="removeModal">
+        <div class="modal">
+            <h3>Remove Events</h3>
+            <div class="muted" id="removeDateLabel"></div>
+            <div class="rem-list" id="removeList"></div>
+            <div class="modal-footer">
+                <button class="btn small secondary" id="cancelRemove">Cancel</button>
+                <button class="btn small" id="confirmRemove">Delete Selected</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const $ = (selector) => document.querySelector(selector);
+        const $$ = (selector) => document.querySelectorAll(selector);
+        
+        const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+        const colors = ["yellow", "red", "blue", "green"];
+        const API_BASE_URL = 'http://localhost:5000/api';
+
+        const state = {
+            viewYear: 2024,
+            viewMonth: 9,
+            selected: new Date(2024, 9, 11),
+            events: {},
+            ui: {
+                leftCollapsed: false,
+                rightCollapsed: false
+            }
+        };
+
+        // DOM Elements
+        const elements = {
+            appGrid: $('#appGrid'),
+            yearLabel: $('#yearLabel'),
+            monthList: $('#monthList'),
+            prevYear: $('#prevYear'),
+            nextYear: $('#nextYear'),
+            grid: $('#grid'),
+            eventsTitle: $('#eventsTitle'),
+            eventList: $('#eventList'),
+            addBtn: $('#addBtn'),
+            removeBtn: $('#removeBtn'),
+            addModal: $('#addModal'),
+            addDateLabel: $('#addDateLabel'),
+            evName: $('#evName'),
+            evDesc: $('#evDesc'),
+            colorPills: $('#colorPills'),
+            cancelAdd: $('#cancelAdd'),
+            saveAdd: $('#saveAdd'),
+            removeModal: $('#removeModal'),
+            removeDateLabel: $('#removeDateLabel'),
+            removeList: $('#removeList'),
+            cancelRemove: $('#cancelRemove'),
+            confirmRemove: $('#confirmRemove'),
+            monthTitle: $('#monthTitle')
+        };
+
+        const api = {
+            async getEvents() {
+                try {
+                    const response = await fetch(`${API_BASE_URL}/events`);
+                    if (!response.ok) throw new Error('Failed to fetch events', response);
+                    const data =  await response.json();
+                    console.log(data)
+                    return data;
+                    
+                } catch (error) {
+                    console.error('Error fetching events:', error);
+                    throw error;
+                }
+            },
+
+            async addEvent(eventData) {
+                try {
+                    const response = await fetch(`${API_BASE_URL}/add-event`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(eventData)
+                    });
+                    if (!response.ok) throw new Error('Failed to add event', response);
+                    return await response.json();
+
+                } catch (error) {
+                    console.error('Error adding event:', error);
+                    throw error;
+                }
+            },
+
+            async deleteEvents(eventIds) {
+                try {
+                    const response = await fetch(`${API_BASE_URL}/events/batch`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ event_ids: eventIds })
+                    });
+                    if (!response.ok) throw new Error('Failed to delete events');
+                    return await response.json();
+                } catch (error) {
+                    console.error('Error deleting events:', error);
+                    throw error;
+                }
+            }
+        };
+
+        
+        const keyFromDate = (date) => {
+            return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+        };
+
+        const loadState = async () => {
+            try {
+                elements.eventList.innerHTML = '<div class="no-events">Loading events...</div>';
+                state.events = await api.getEvents();
+            } catch (error) {
+                elements.eventList.innerHTML = `
+                    <div class="error-message">
+                        Failed to load events. Please check if the server is running.
+                    </div>
+                `;
+                console.error('Failed to load state:', error);
+            }
+        };
+
+        // --- RENDER FUNCTIONS ---
+        const render = () => {
+            renderSidebar();
+            renderCalendar();
+            renderEventsPanel();
+            applyUICollapse();
+        };
+
+        const applyUICollapse = () => {
+            elements.appGrid.classList.toggle('left-collapsed', state.ui.leftCollapsed);
+            elements.appGrid.classList.toggle('right-collapsed', state.ui.rightCollapsed);
+        };
+
+        const renderSidebar = () => {
+            elements.yearLabel.textContent = state.viewYear;
+            elements.monthList.innerHTML = monthNames.map((m, i) => 
+                `<li class="${i === state.viewMonth ? 'active' : ''}" data-month="${i}">${m}</li>`
+            ).join('');
+        };
+
+        const renderCalendar = () => {
+            const y = state.viewYear, m = state.viewMonth;
+            elements.monthTitle.textContent = monthNames[m].toUpperCase();
+            
+            const firstDay = new Date(y, m, 1).getDay();
+            const daysInMonth = new Date(y, m + 1, 0).getDate();
+            
+            let cells = Array(firstDay).fill('<div class="cell empty"></div>');
+            
+            for (let d = 1; d <= daysInMonth; d++) {
+                const date = new Date(y, m, d);
+                const key = keyFromDate(date);
+                const isSelected = date.toDateString() === state.selected.toDateString();
+                const events = state.events[key] || [];
+                const dots = events.slice(0, 2).map(e => 
+                    `<div class="dot-s ${e.color}"></div>`
+                ).join('');
+                
+                cells.push(`
+                    <div class="cell ${isSelected ? 'selected' : ''}" data-day="${d}">
+                        <div class="daynum">${d}</div>
+                        <div class="dots">${dots}</div>
+                    </div>
+                `);
+            }
+            
+            elements.grid.innerHTML = cells.join('');
+        };
+
+        const renderEventsPanel = () => {
+            const key = keyFromDate(state.selected);
+            const events = state.events[key] || [];
+
+            elements.removeBtn.disabled = events.length === 0;
+
+            if (!events.length) {
+                elements.eventList.innerHTML = `<div class="no-events">No events for this day.</div>`;
+                return;
+            }
+
+            elements.eventList.innerHTML = events.map(ev => `
+                <div class="item">
+                    <div class="bullet ${ev.color}"></div>
+                    <div class="content">
+                        <div class="name">${ev.title}</div>
+                        <div class="desc">${ev.desc || ev.description}</div>
+                    </div>
+                </div>
+            `).join('');
+        };
+
+        // --- MODAL LOGIC ---
+        let chosenColor = "yellow";
+
+        const openAddModal = () => {
+            elements.addDateLabel.textContent = state.selected.toLocaleDateString('en-US', { 
+                weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' 
+            });
+            elements.evName.value = '';
+            elements.evDesc.value = '';
+            chosenColor = 'yellow';
+            elements.colorPills.innerHTML = colors.map(c => 
+                `<div class="pill ${c === chosenColor ? 'active' : ''}" data-color="${c}"></div>`
+            ).join('');
+            elements.addModal.classList.add('open');
+            elements.evName.focus();
+        };
+
+        const closeAddModal = () => {
+            elements.addModal.classList.remove('open');
+        };
+
+        const openRemoveModal = () => {
+            const key = keyFromDate(state.selected);
+            const events = state.events[key] || [];
+            
+            elements.removeDateLabel.textContent = state.selected.toLocaleDateString('en-US', { 
+                weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' 
+            });
+            
+            if (!events.length) {
+                elements.removeList.innerHTML = `<div class="muted" style="padding: 8px">No events to remove.</div>`;
+            } else {
+                elements.removeList.innerHTML = events.map(ev => 
+                    `<label class="rem-item">
+                        <input type="checkbox" value="${ev.id}">
+                        <span class="tag" style="background:var(--accent-${ev.color})"></span>
+                        <div>${ev.title}</div>
+                    </label>`
+                ).join('');
+            }
+            elements.removeModal.classList.add('open');
+        };
+
+        const closeRemoveModal = () => {
+            elements.removeModal.classList.remove('open');
+        };
+
+        // --- EVENT LISTENERS ---
+        elements.prevYear.addEventListener('click', () => {
+            state.viewYear--;
+            render();
+        });
+
+        elements.nextYear.addEventListener('click', () => {
+            state.viewYear++;
+            render();
+        });
+
+        elements.monthList.addEventListener('click', (e) => {
+            if (e.target.dataset.month) {
+                state.viewMonth = parseInt(e.target.dataset.month, 10);
+                state.selected = new Date(state.viewYear, state.viewMonth, 1);
+                render();
+            }
+        });
+
+        elements.grid.addEventListener('click', (e) => {
+            const cell = e.target.closest('.cell');
+            if (cell && cell.dataset.day) {
+                state.selected = new Date(state.viewYear, state.viewMonth, parseInt(cell.dataset.day, 10));
+                render();
+            }
+        });
+
+        $('#toggleSidebar').addEventListener('click', () => {
+            state.ui.leftCollapsed = !state.ui.leftCollapsed;
+            render();
+        });
+
+        $('#toggleRight').addEventListener('click', () => {
+            state.ui.rightCollapsed = !state.ui.rightCollapsed;
+            render();
+        });
+
+        elements.addBtn.addEventListener('click', openAddModal);
+        elements.removeBtn.addEventListener('click', openRemoveModal);
+        elements.cancelAdd.addEventListener('click', closeAddModal);
+        elements.cancelRemove.addEventListener('click', closeRemoveModal);
+
+        elements.colorPills.addEventListener('click', (e) => {
+            if (e.target.dataset.color) {
+                chosenColor = e.target.dataset.color;
+                $$('#colorPills .pill').forEach(p => p.classList.remove('active'));
+                e.target.classList.add('active');
+            }
+        });
+
+        elements.saveAdd.addEventListener('click', async () => {
+            const title = elements.evName.value.trim();
+            if (!title) {
+                elements.evName.focus();
+                return;
+            }
+
+            const key = keyFromDate(state.selected);
+            const eventData = {
+                date: key,
+                title: title,
+                description: elements.evDesc.value.trim(),
+                color: chosenColor
+            };
+
+            try {
+                elements.saveAdd.innerHTML = '<div class="loading"></div>';
+                elements.saveAdd.disabled = true;
+                
+                await api.addEvent(eventData);
+                await loadState();
+                render();
+                closeAddModal();
+            } catch (error) {
+                // alert('Failed to add event. Please try again.');
+            } finally {
+                elements.saveAdd.innerHTML = 'Save';
+                elements.saveAdd.disabled = false;
+            }
+        });
+
+        elements.confirmRemove.addEventListener('click', async () => {
+            const idsToRemove = [...$$('#removeList input:checked')].map(cb => cb.value);
+            if (!idsToRemove.length) return;
+
+            try {
+                elements.confirmRemove.innerHTML = '<div class="loading"></div>';
+                elements.confirmRemove.disabled = true;
+                
+                await api.deleteEvents(idsToRemove);
+                await loadState();
+                render();
+                closeRemoveModal();
+            } catch (error) {
+                // alert('Failed to delete events. Please try again.');
+            } finally {
+                elements.confirmRemove.innerHTML = 'Delete Selected';
+                elements.confirmRemove.disabled = false;
+            }
+        });
+
+        // --- INIT ---
+        const init = async () => {
+            await loadState();
+            render();
+            
+            // Refresh events every 30 seconds
+            setInterval(async () => {
+                await loadState();
+                render();
+            }, 30000);
+        };
+
+        init();
+    </script>
+</body>
+</html>

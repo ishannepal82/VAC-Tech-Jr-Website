@@ -1,0 +1,36 @@
+@import "tailwindcss/preflight";
+@import "tailwindcss/utilities";
+@import "tailwindcss";
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap");
+body {
+  font-family: "Poppins", sans-serif;
+  background: #0a1a33;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+  scrollbar-width: thin;
+  scrollbar-color: #9cc9ff #1a2f55;
+}
+.noScroll {
+  overflow: scroll;
+  scrollbar-width: none;
+}
+.scrolling {
+  scrollbar-width: thin;
+  scrollbar-color: #9cc9ff transparent;
+  scrollbar-gutter: stable;
+  scrollbar-arrow-color: transparent;
+}
+/* Add this at the end of your global CSS file */
+@keyframes fade-in-up {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-fade-in-up {
+  animation: fade-in-up 0.25s ease-out both;
+}
