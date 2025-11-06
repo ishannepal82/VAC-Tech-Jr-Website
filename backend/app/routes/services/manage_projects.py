@@ -146,7 +146,8 @@ def create_project():
             "author_email": user['email'],
             "github": data.get("github", "").strip(),
             "committee": data["committee"].strip(),
-            "approved": False,                           # ← use "approved", not "is_approved"
+            "approved": False,                           # legacy field kept
+            "is_approved": False,                        # <-- ADDED minimal fix
             "required_members": data["required_members"],
             "unknown_members": [],
             "members": [],
@@ -238,9 +239,9 @@ def approve_project(id):
         send_notification(
             db=db,
             title="Project Approved",
-            message=f"Your project '{doc.to_dict()['title']}' has been approved with {points} points.",
+            message=f"Your project '{doc.to_dict().get('title','')}' has been approved with {points} points.",
             notification_type="info",                    # ← Add a proper type
-            to_email=doc.to_dict()['author_email'],      # ← Correct
+            to_email=doc.to_dict().get('author_email',''),      # ← Correct
             project_id=id,                               # ← Correct
             from_email="admin@yourclub.edu"              # ← Optional: override default
             )
@@ -276,9 +277,9 @@ def decline_project(pid):
         send_notification(
             db,
             "Project Declined",
-            f"Your project '{doc.to_dict()['title']}' has been declined due to {data['reason']}",
+            f"Your project '{doc.to_dict().get('title','')}' has been declined due to {data['reason']}",
             "info",
-            doc.to_dict()['author_email'],
+            doc.to_dict().get('author_email',''),
             pid
         )
 
@@ -300,6 +301,9 @@ def join_project(pid):
         if not doc.exists:
             return jsonify({'msg': 'Project not found'}), 404
         
+        if len(doc.to_dict()['members']) == doc.to_dict()['required_members']:
+            return jsonify({'msg': 'Project is full'}), 400
+        
         if uid in doc.to_dict()['members'] or uid in doc.to_dict()['unknown_members']:
             return jsonify({'msg': 'You are already a member of this project'}), 400
 
@@ -308,11 +312,12 @@ def join_project(pid):
         send_notification(
             db,
             "New Join Request",
-            f"{user.get('name')} has requested to join your project '{doc.to_dict()['title']}'.",
+            f"{user.get('name')} has requested to join your project '{doc.to_dict().get('title','')}'.",
             "approval",
-            doc.to_dict()['author_email'],
+            doc.to_dict().get('author_email',''),
             pid,
-            user.get('email')
+            user.get('email'),
+            user.get('uid')
         )
 
         return jsonify({'msg': 'Successfully requested to join the project'}), 200
@@ -320,7 +325,7 @@ def join_project(pid):
         return jsonify({'msg': 'Internal server error', 'error': str(e)}), 500
 
 @projects_bp.route('/approve_user/<pid>/<uid>', methods=['PUT'])
-def approve_user(uid, pid):
+def approve_user(pid, uid):
     try:
         db = current_app.config['db']
         current_user = get_current_user()
@@ -359,7 +364,7 @@ def approve_user(uid, pid):
         return jsonify({'msg': 'Internal server error', 'error': str(e)}), 500
 
 @projects_bp.route('/decline_user/<pid>/<uid>', methods=['PUT'])
-def decline_user(uid, pid):
+def decline_user(pid, uid):
     try:
         db = current_app.config['db']
 
@@ -380,7 +385,7 @@ def decline_user(uid, pid):
     except Exception as e:
         return jsonify({'msg': 'Internal server error', 'error': str(e)}), 500
 
-@projects_bp.route('/projects/<pid>/request-completion', methods=['POST'])
+@projects_bp.route('/projects/request-completion/<pid>', methods=['POST'])
 def request_completion(pid):
     try:
         db = current_app.config['db']
@@ -502,4 +507,3 @@ def decline_completion(pid):
         return jsonify({'msg': 'Successfully declined project completion'}), 200
     except Exception as e:
         return jsonify({'msg': 'Internal server error', 'error': str(e)}), 500
-

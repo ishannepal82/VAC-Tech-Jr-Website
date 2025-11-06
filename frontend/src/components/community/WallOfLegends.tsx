@@ -15,7 +15,7 @@ type LegendMember = {
 };
 
 type PodiumMemberProps = {
-  member: LegendMember;
+  member?: LegendMember;
   height: string;
   borderColor: string;
   medalColor: string;
@@ -25,67 +25,73 @@ type InfoCardProps = {
   icon: ReactNode;
   title: string;
   description: string;
-
   onClick: () => void;
 };
-type rank = "Newbie" | "Explorer" | "Builder" | "Developer" | "Hacker";
-const getRank = (points: number): rank => {
+
+type Rank =
+  | "Newbie"
+  | "Explorer"
+  | "Builder"
+  | "Developer"
+  | "Hacker";
+
+const getRank = (points: number): Rank => {
   if (points <= 100) return "Newbie";
   if (points <= 300) return "Explorer";
   if (points <= 600) return "Builder";
   if (points <= 1000) return "Developer";
   return "Hacker";
 };
+
 // --- REUSABLE COMPONENTS ---
 const PodiumMember = ({
   member,
   height,
   borderColor,
   medalColor,
-}: PodiumMemberProps) => (
-  <div
-    className={`w-1/3 ${height} bg-[#1a2f55] rounded-t-2xl p-1 flex flex-col justify-end items-center text-center border-b-4 ${borderColor} transform hover:-translate-y-3 transition-transform duration-300`}
-  >
-    <h1
-      className={`flex items-center justify-center gap-2 font-bold pb-5 px-6 py-3 ${
-        member.rank === 1
-          ? " text-yellow-500 text-5xl pb-5 shadow-yellow-400/60"
-          : member.rank === 2
-          ? " text-gray-200 text-2xl shadow-gray-400/60"
-          : " text-amber-700 text-xl shadow-orange-500/60"
-      }`}
+}: PodiumMemberProps) => {
+  if (!member) return null; // Defensive check
+
+  return (
+    <div
+      className={`w-1/3 ${height} bg-[#1a2f55] rounded-t-2xl p-1 flex flex-col justify-end items-center text-center border-b-4 ${borderColor} transform hover:-translate-y-3 transition-transform duration-300`}
     >
-      {member.rank === 1 && (
-        <Crown className="w-10 h-10 text-yellow-500" strokeWidth={2.5} />
-      )}
-      {member.rank === 2 && (
-        <Crown className="w-6 h-6 text-gray-200" strokeWidth={2.5} />
-      )}
-      {member.rank === 3 && (
-        <Crown className="w-6 h-6 text-amber-700" strokeWidth={2.5} />
-      )}
-      {member.rank === 1 ? "1st" : member.rank === 2 ? "2nd" : "3rd"}
-    </h1>
-    <img
-      src={member?.avatar}
-      alt={member.name}
-      className="w-20 h-20 rounded-full border-4 border-white mb-3"
-    />
-    <h4 className="font-bold text-white text-xl">{member.name}</h4>
-    <p className={`font-black text-xl ${medalColor}`}>
-      <CountUp end={member.points} duration={3} />
-    </p>
-    <MemberRankBadge rank={getRank(member.rank)} />
-  </div>
-);
+      <h1
+        className={`flex items-center justify-center gap-2 font-bold pb-5 px-6 py-3 ${
+          member.rank === 1
+            ? "text-yellow-500 text-5xl pb-5 shadow-yellow-400/60"
+            : member.rank === 2
+            ? "text-gray-200 text-2xl shadow-gray-400/60"
+            : "text-amber-700 text-xl shadow-orange-500/60"
+        }`}
+      >
+        {member.rank === 1 && (
+          <Crown className="w-10 h-10 text-yellow-500" strokeWidth={2.5} />
+        )}
+        {member.rank === 2 && (
+          <Crown className="w-6 h-6 text-gray-200" strokeWidth={2.5} />
+        )}
+        {member.rank === 3 && (
+          <Crown className="w-6 h-6 text-amber-700" strokeWidth={2.5} />
+        )}
+        {member.rank === 1 ? "1st" : member.rank === 2 ? "2nd" : "3rd"}
+      </h1>
 
-const InfoCard = ({
-  icon,
-  title,
-  description,
+      <img
+        src={member.avatar}
+        alt={member.name}
+        className="w-20 h-20 rounded-full border-4 border-white mb-3"
+      />
+      <h4 className="font-bold text-white text-xl">{member.name}</h4>
+      <p className={`font-black text-xl ${medalColor}`}>
+        <CountUp end={member.points} duration={3} /> pts
+      </p>
+      <MemberRankBadge rank={getRank(member.points)} />
+    </div>
+  );
+};
 
-  onClick,
-}: InfoCardProps) => (
+const InfoCard = ({ icon, title, description, onClick }: InfoCardProps) => (
   <button onClick={onClick} className="w-full text-left h-full">
     <div className="bg-[#1a2f55] p-6 rounded-2xl h-full transition-colors duration-300 hover:bg-[#254272] cursor-pointer">
       <div className="flex items-center gap-3">
@@ -99,12 +105,12 @@ const InfoCard = ({
 
 // --- MAIN COMPONENT ---
 export default function WallOfLegends() {
-  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
-  const [modalTitle, setModalTitle] = useState<string>("");
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalTitle, setModalTitle] = useState("");
   const [modalContent, setModalContent] = useState<"ranks" | "xp" | null>(null);
   const [podium, setPodium] = useState<LegendMember[]>([]);
   const [others, setOthers] = useState<LegendMember[]>([]);
-  const [_isLoading, setIsLoading] = useState<boolean>(true);
+  const [isLoading, setIsLoading] = useState(true);
 
   const handleOpenModal = (title: string, content: "ranks" | "xp") => {
     setModalTitle(title);
@@ -118,27 +124,29 @@ export default function WallOfLegends() {
   };
 
   const handleFetchData = async () => {
+    setIsLoading(true);
     try {
       const response = await fetch(
         "http://127.0.0.1:5000/api/leaderboard/get-leaderboard"
       );
       if (!response.ok) {
-        console.log("Error Fetching Data:", response);
+        console.error("Error fetching leaderboard:", response.statusText);
         return;
       }
       const data = await response.json();
-      console.log(data);
-      const sorted_data: LegendMember[] = data?.sorted_users || [];
-      setPodium(sorted_data.slice(0, 3));
-      setOthers(sorted_data.slice(3));
+      const sortedData: LegendMember[] = data?.sorted_users || [];
+
+      setPodium(sortedData.slice(0, 3));
+      setOthers(sortedData.slice(3));
     } catch (error) {
       console.error("Error fetching data:", error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   useEffect(() => {
     handleFetchData();
-    setIsLoading(false);
   }, []);
 
   return (
@@ -154,9 +162,14 @@ export default function WallOfLegends() {
           </div>
 
           <div className="mt-12 grid grid-cols-1 lg:grid-cols-3 gap-10">
+            {/* --- Podium Section --- */}
             <div className="lg:col-span-2">
               <div className="flex justify-center items-end gap-4">
-                {podium?.length >= 2 ? (
+                {isLoading ? (
+                  <p className="text-gray-400 text-center w-full">
+                    Loading leaderboard...
+                  </p>
+                ) : podium.length >= 3 ? (
                   <>
                     <PodiumMember
                       member={podium[1]}
@@ -179,34 +192,38 @@ export default function WallOfLegends() {
                   </>
                 ) : (
                   <p className="text-gray-400 text-center w-full">
-                    Loading leaderboard...
+                    Not enough leaderboard data yet.
                   </p>
                 )}
               </div>
 
-              <div className="mt-10 flex flex-col gap-4">
-                {others.map((member) => (
-                  <div
-                    key={member?.rank}
-                    className="bg-[#1a2f55] p-4 rounded-lg flex items-center justify-between hover:bg-[#254272] transition-colors"
-                  >
-                    <div className="flex items-center gap-4">
-                      <img
-                        src={member?.avatar}
-                        alt={member.name}
-                        className="w-12 h-12 rounded-full"
-                      />
-                      <p className="font-semibold text-white">{member.name}</p>
-                      <MemberRankBadge rank={getRank(member.rank)} />
+              {/* --- Other Members --- */}
+              {!isLoading && others.length > 0 && (
+                <div className="mt-10 flex flex-col gap-4">
+                  {others.map((member) => (
+                    <div
+                      key={member.rank}
+                      className="bg-[#1a2f55] p-4 rounded-lg flex items-center justify-between hover:bg-[#254272] transition-colors"
+                    >
+                      <div className="flex items-center gap-4">
+                        <img
+                          src={member.avatar}
+                          alt={member.name}
+                          className="w-12 h-12 rounded-full"
+                        />
+                        <p className="font-semibold text-white">{member.name}</p>
+                        <MemberRankBadge rank={getRank(member.points)} />
+                      </div>
+                      <p className="font-bold text-lg text-[#9cc9ff]">
+                        <CountUp end={member.points} duration={2} /> pts
+                      </p>
                     </div>
-                    <p className="font-bold text-lg text-[#9cc9ff]">
-                      <CountUp end={member.points} duration={2} /> pts
-                    </p>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
 
+            {/* --- Info Section --- */}
             <aside className="lg:col-span-1 flex flex-col gap-8">
               <InfoCard
                 icon={<Info />}

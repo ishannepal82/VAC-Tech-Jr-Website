@@ -1,7 +1,7 @@
 from flask import Flask
 from firebase_admin import firestore, credentials, initialize_app
-import cloudinary
 from flask_cors import CORS
+import cloudinary
 
 db = None
 '''Initialzing Firebase app'''
@@ -12,13 +12,15 @@ db = firestore.client()
 def create_app():
     app = Flask(__name__)
 
-    '''Initializing Cloudinary App'''
+    '''Initializing Imagekit App'''
+    # SDK initialization
     cloudinary.config(
-        cloud_name="do9ertejv",
-        api_key="959525144626746",
-        api_secret="q8tDQ2d7hzfI6A05QLlwP8m-rKQ",
-        secure=True
+        cloud_name = "do9ertejv",
+        api_key ="959525144626746",
+        api_secret = "q8tDQ2d7hzfI6A05QLlwP8m-rKQ",
+        secure = True  # Always use HTTPS URLs
     )
+    
 
     '''Enabling Flask CORS to the app'''
     CORS(app, supports_credentials=True, origins=["http://localhost:5173"])
@@ -55,5 +57,11 @@ def create_app():
 
     from app.routes.services.notifications import notifications_bp
     app.register_blueprint(notifications_bp, url_prefix='/api/notifications')
+
+    from app.routes.services.manage_bod import bod_bp
+    app.register_blueprint(bod_bp, url_prefix='/api/bod')
+
+    from app.routes.services.manage_community import community_bp
+    app.register_blueprint(community_bp, url_prefix='/api/community')
     
     return app

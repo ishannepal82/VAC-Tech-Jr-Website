@@ -1,7 +1,7 @@
 import datetime
 from firebase_admin import firestore
 
-def send_notification(db, title, message, notification_type, to_email, project_id, from_email="ishannepal", read_status=False):
+def send_notification(db, title, message, notification_type, to_email, project_id, from_email="ishannepal", uid="ishannepal", read_status=False):
     try:
         db.collection('notifications').add({
             "title": title,
@@ -11,6 +11,7 @@ def send_notification(db, title, message, notification_type, to_email, project_i
             "project_id": project_id,
             "from_email": from_email,
             "read_status": read_status,
+            "uid": uid,
             "created_at": firestore.SERVER_TIMESTAMP  # Better than utcnow() for Firestore
         })
     except Exception as e:

@@ -10,6 +10,7 @@ import {
   Archive,
   Loader2,
   AlertTriangle,
+  XCircle,
 } from "lucide-react";
 import Tabs from "../components/Tabs";
 import Modal from "../components/Modal";
@@ -22,46 +23,19 @@ const initialFormState = {
   project_timeframe: "",
   github: "",
   required_members: 1,
+  committee: "",
+  members: [] as string[], // Members array for tracking
 };
 
 export default function AdminProjects() {
-  // its just for testing if member section worked or not--------------------------------------
-  const [members, setMembers] = useState([
-    { name: "Rishab Thapa" },
-    { name: "Ishan Nepal" },
-    { name: "Shishir Khatri" },
-  ]);
-
-  const [newMemberName, setNewMemberName] = useState("");
-  const [showAddModal, setShowAddModal] = useState(false);
+  // State for removing members
   const [removeIndex, setRemoveIndex] = useState<null | number>(null);
 
-  // Add member
-  const handleAddMember = () => {
-    if (newMemberName.trim()) {
-      setMembers((prev) => [...prev, { name: newMemberName.trim() }]);
-      setNewMemberName("");
-      setShowAddModal(false);
-      toast.success("Member added successfully");
-    }
-  };
-
-  // Confirm remove member
-  const handleRemoveMember = (index: number) => {
-    setRemoveIndex(index);
-  };
-
-  const confirmRemoveMember = () => {
-    if (removeIndex !== null) {
-      setMembers((prev) => prev.filter((_, i) => i !== removeIndex));
-      setRemoveIndex(null);
-      toast.success("Member removed successfully");
-    }
-  };
-  //------------------------------------------------------------
+  // Project Management States
   const [approvalRequests, setApprovalRequests] = useState<Project[]>([]);
   const [approvedProjects, setApprovedProjects] = useState<Project[]>([]);
   const [completedProjects, setCompletedProjects] = useState<Project[]>([]);
+  const [declinedProjects, setDeclinedProjects] = useState<Project[]>([]);
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isApprovalModalOpen, setApprovalModalOpen] = useState(false);
@@ -73,7 +47,7 @@ export default function AdminProjects() {
   const [rejectionReason, setRejectionReason] = useState("");
   const [isLoading, setIsLoading] = useState(true);
 
-  // State for the custom confirmation dialog
+  // Confirmation dialog state
   const [isConfirmModalOpen, setConfirmModalOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState<{
     title: string;
@@ -82,6 +56,23 @@ export default function AdminProjects() {
     confirmText: string;
     color: "red" | "blue";
   } | null>(null);
+
+  // Remove member from the local edit form
+  const handleRemoveMember = (index: number) => {
+    setRemoveIndex(index);
+  };
+
+  const confirmRemoveMember = () => {
+    if (removeIndex !== null) {
+      const removedMember = editFormData.members[removeIndex];
+      setEditFormData(prev => ({
+        ...prev,
+        members: prev.members.filter((_, i) => i !== removeIndex)
+      }));
+      setRemoveIndex(null);
+      toast.success(`${removedMember} removed from the project`);
+    }
+  };
 
   // --- DATA FETCHING ---
   const handleFetch = async () => {
@@ -95,11 +86,14 @@ export default function AdminProjects() {
       const data = await res.json();
       const projects: Project[] = data.projects;
 
-      setApprovalRequests(projects.filter((p) => !p.is_approved));
+      setApprovalRequests(
+        projects.filter((p) => !p.is_approved && !p.is_declined)
+      );
       setApprovedProjects(
         projects.filter((p) => p.is_approved && !p.is_completed)
       );
       setCompletedProjects(projects.filter((p) => p.is_completed));
+      setDeclinedProjects(projects.filter((p) => p.is_declined));
     } catch (error) {
       console.error("Error Fetching Data:", error);
       toast.error("Failed to fetch project data.");
@@ -114,7 +108,7 @@ export default function AdminProjects() {
 
   // --- FORM & ACTION HANDLERS ---
   const handleAddFormChange = (
-    e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
     const { name, value, type } = e.target;
     setAddFormData((prev) => ({
@@ -124,7 +118,7 @@ export default function AdminProjects() {
   };
 
   const handleEditFormChange = (
-    e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
     const { name, value, type } = e.target;
     setEditFormData((prev) => ({
@@ -149,10 +143,15 @@ export default function AdminProjects() {
 
     const isApproving = !selectedProject.is_approved;
     let success = false;
-    let payload = { ...editFormData };
+    
+    // Include the updated members array in the payload
+    let payload = { 
+      ...editFormData,
+      members: editFormData.members // This will update the backend members list
+    };
 
     if (isApproving) {
-      success = await approveProject(selectedProject.id, payload.points);
+      success = await approveProject(selectedProject.id, payload);
     } else {
       success = await updateProject(selectedProject.id, payload);
     }
@@ -213,6 +212,25 @@ export default function AdminProjects() {
     setConfirmModalOpen(true);
   };
 
+  const handleRestoreProject = (projectId: string, projectTitle: string) => {
+    setConfirmAction({
+      title: "Restore Project",
+      message: `Are you sure you want to restore "${projectTitle}" to pending requests?`,
+      onConfirm: () => {
+        updateProject(projectId, { is_declined: false }).then((success) => {
+          if (success) {
+            toast.success(`Project "${projectTitle}" has been restored.`);
+            handleFetch();
+          }
+        });
+        setConfirmModalOpen(false);
+      },
+      confirmText: "Restore Project",
+      color: "blue",
+    });
+    setConfirmModalOpen(true);
+  };
+
   // --- MODAL OPENER HELPERS ---
   const openAddModal = () => {
     setAddFormData(initialFormState);
@@ -228,6 +246,8 @@ export default function AdminProjects() {
       project_timeframe: project.project_timeframe?.split("T")[0] || "",
       github: project.github || "",
       required_members: project.required_members || 1,
+      committee: project.committee || "",
+      members: project.members || [], 
     });
     setApprovalModalOpen(true);
   };
@@ -257,12 +277,13 @@ export default function AdminProjects() {
       ) : (
         <Tabs
           tabNames={[
-            "Requests",
-            "Approved ",
-            "Completed ",
+            "Pending Requests",
+            "Approved Projects",
+            "Completed Projects",
+            "Declined Projects",
           ]}
         >
-          {/* Tab 1: Approval Requests */}
+          {/* Tab 1: Approval Requests (Pending) */}
           <div className="space-y-4">
             {approvalRequests.length > 0 ? (
               approvalRequests.map((req) => (
@@ -281,6 +302,11 @@ export default function AdminProjects() {
                     <p className="text-sm text-gray-300 mt-2">
                       {req.description}
                     </p>
+                    {req.committee && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        Committee: <span className="capitalize">{req.committee}</span>
+                      </p>
+                    )}
                   </div>
                   <div className="flex gap-2 flex-shrink-0">
                     <button
@@ -293,7 +319,7 @@ export default function AdminProjects() {
                     <button
                       onClick={() => openRejectModal(req)}
                       className="bg-red-600 hover:bg-red-700 p-2 rounded-lg transition"
-                      title="Reject"
+                      title="Decline"
                     >
                       <X size={18} />
                     </button>
@@ -302,7 +328,7 @@ export default function AdminProjects() {
               ))
             ) : (
               <p className="text-gray-500 text-center py-10">
-                No new project requests.
+                No pending project requests.
               </p>
             )}
           </div>
@@ -327,6 +353,16 @@ export default function AdminProjects() {
                         {proj.points}
                       </span>
                     </p>
+                    {proj.committee && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        Committee: <span className="capitalize">{proj.committee}</span>
+                      </p>
+                    )}
+                    {proj.members && proj.members.length > 0 && (
+                      <p className="text-xs text-blue-400 mt-1">
+                        Team ({proj.members.length}): {proj.members.join(", ")}
+                      </p>
+                    )}
                   </div>
                   <div className="flex gap-3 flex-shrink-0 items-center">
                     <button
@@ -381,6 +417,11 @@ export default function AdminProjects() {
                         {proj.points}
                       </span>
                     </p>
+                    {proj.committee && (
+                      <p className="text-xs text-gray-600 mt-1">
+                        Committee: <span className="capitalize">{proj.committee}</span>
+                      </p>
+                    )}
                   </div>
                 </div>
               ))
@@ -391,14 +432,67 @@ export default function AdminProjects() {
               </div>
             )}
           </div>
+
+          {/* Tab 4: Declined Projects */}
+          <div className="space-y-4">
+            {declinedProjects.length > 0 ? (
+              declinedProjects.map((proj) => (
+                <div
+                  key={proj.id}
+                  className="bg-[#0f172a]/50 p-4 rounded-lg border border-red-900/30 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 opacity-70"
+                >
+                  <div>
+                    <h3 className="font-bold text-red-400">{proj.title}</h3>
+                    <p className="text-sm text-gray-400">
+                      Submitted by:{" "}
+                      <span className="font-semibold text-gray-300">
+                        {proj.author}
+                      </span>
+                    </p>
+                    {proj.rejection_reason && (
+                      <p className="text-sm text-red-300 mt-2 italic">
+                        Reason: {proj.rejection_reason}
+                      </p>
+                    )}
+                    {proj.committee && (
+                      <p className="text-xs text-gray-600 mt-1">
+                        Committee: <span className="capitalize">{proj.committee}</span>
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex gap-3 flex-shrink-0 items-center">
+                    <button
+                      className="text-blue-400 hover:text-blue-300"
+                      title="Restore Project"
+                      onClick={() => handleRestoreProject(proj.id, proj.title)}
+                    >
+                      <Check size={18} />
+                    </button>
+                    <button
+                      className="text-red-400 hover:text-red-300"
+                      title="Delete Permanently"
+                      onClick={() => handleDelete(proj.id, proj.title)}
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-center text-gray-500 py-10">
+                <XCircle size={48} className="mx-auto" />
+                <p className="mt-2">No declined projects.</p>
+              </div>
+            )}
+          </div>
         </Tabs>
       )}
 
-      {/* --- MODALS --- */}
+      {/* --- ADD PROJECT MODAL --- */}
       <Modal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
-        title="Add New Manual Project"
+        title="Add New Project"
       >
         <form onSubmit={handleAddProjectForm} className="space-y-4">
           <div>
@@ -418,6 +512,7 @@ export default function AdminProjects() {
               className="w-full bg-[#0f172a] border border-gray-600 rounded-lg py-2 px-4 text-white"
             />
           </div>
+
           <div>
             <label
               htmlFor="add-description"
@@ -435,6 +530,7 @@ export default function AdminProjects() {
               className="w-full bg-[#0f172a] border border-gray-600 rounded-lg py-2 px-4 text-white"
             />
           </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label
@@ -454,6 +550,7 @@ export default function AdminProjects() {
                 className="w-full bg-[#0f172a] border border-gray-600 rounded-lg py-2 px-4 text-white"
               />
             </div>
+
             <div>
               <label
                 htmlFor="add-required_members"
@@ -473,6 +570,7 @@ export default function AdminProjects() {
               />
             </div>
           </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label
@@ -490,6 +588,7 @@ export default function AdminProjects() {
                 className="w-full bg-[#0f172a] border border-gray-600 rounded-lg py-2 px-4 text-white"
               />
             </div>
+
             <div>
               <label
                 htmlFor="add-github"
@@ -507,6 +606,33 @@ export default function AdminProjects() {
               />
             </div>
           </div>
+
+          <div>
+            <label
+              htmlFor="add-committee"
+              className="block text-sm font-medium text-gray-400 mb-1"
+            >
+              Committee
+            </label>
+            <select
+              id="add-committee"
+              name="committee"
+              value={addFormData.committee}
+              onChange={handleAddFormChange}
+              className="w-full bg-[#0f172a] border border-gray-600 rounded-lg py-2 px-4 text-white"
+              required
+            >
+              <option value="" disabled>
+                Select a committee
+              </option>
+              <option value="finance">Finance</option>
+              <option value="marketing">Marketing</option>
+              <option value="development">Development</option>
+              <option value="design">Design</option>
+              <option value="operations">Operations</option>
+            </select>
+          </div>
+
           <div className="flex justify-end gap-4 pt-6">
             <button
               type="button"
@@ -519,12 +645,13 @@ export default function AdminProjects() {
               type="submit"
               className="px-6 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 font-semibold transition"
             >
-              Add Project
+              Create Project
             </button>
           </div>
         </form>
       </Modal>
 
+      {/* --- EDIT/APPROVE PROJECT MODAL --- */}
       <Modal
         isOpen={isApprovalModalOpen}
         onClose={() => setApprovalModalOpen(false)}
@@ -550,6 +677,7 @@ export default function AdminProjects() {
               className="w-full bg-[#0f172a] border border-gray-600 rounded-lg py-2 px-4 text-white"
             />
           </div>
+
           <div>
             <label
               htmlFor="edit-description"
@@ -567,6 +695,7 @@ export default function AdminProjects() {
               className="w-full bg-[#0f172a] border border-gray-600 rounded-lg py-2 px-4 text-white"
             />
           </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label
@@ -586,6 +715,7 @@ export default function AdminProjects() {
                 className="w-full bg-[#0f172a] border border-gray-600 rounded-lg py-2 px-4 text-white"
               />
             </div>
+
             <div>
               <label
                 htmlFor="edit-required_members"
@@ -605,6 +735,7 @@ export default function AdminProjects() {
               />
             </div>
           </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label
@@ -622,6 +753,7 @@ export default function AdminProjects() {
                 className="w-full bg-[#0f172a] border border-gray-600 rounded-lg py-2 px-4 text-white"
               />
             </div>
+
             <div>
               <label
                 htmlFor="edit-github"
@@ -639,25 +771,62 @@ export default function AdminProjects() {
               />
             </div>
           </div>
+
+          <div>
+            <label
+              htmlFor="edit-committee"
+              className="block text-sm font-medium text-gray-400 mb-1"
+            >
+              Committee
+            </label>
+            <select
+              id="edit-committee"
+              name="committee"
+              value={editFormData.committee}
+              onChange={handleEditFormChange}
+              className="w-full bg-[#0f172a] border border-gray-600 rounded-lg py-2 px-4 text-white"
+              required
+            >
+              <option value="" disabled>
+                Select a committee
+              </option>
+              <option value="finance">Finance</option>
+              <option value="marketing">Marketing</option>
+              <option value="development">Development</option>
+              <option value="design">Design</option>
+              <option value="operations">Operations</option>
+            </select>
+          </div>
+
+          {/* Team Members Section - Only Remove, No Add */}
           <div className="space-y-3">
             <label className="block text-sm font-medium text-gray-400 mb-1">
               Team Members
+              {editFormData.members.length > 0 && (
+                <span className="text-gray-500 text-xs ml-2">
+                  ({editFormData.members.length} member{editFormData.members.length !== 1 ? 's' : ''})
+                </span>
+              )}
             </label>
 
-            <div className="bg-[#0f172a] border border-gray-600 rounded-lg py-3 px-4 text-white">
-              {members.length === 0 ? (
-                <p className="text-gray-500 text-sm">No members added yet.</p>
+            <div className="bg-[#0f172a] border border-gray-600 rounded-lg py-3 px-4 text-white max-h-60 overflow-y-auto">
+              {editFormData.members.length === 0 ? (
+                <p className="text-gray-500 text-sm italic">
+                  No members have joined this project yet.
+                </p>
               ) : (
                 <ul className="space-y-2">
-                  {members.map((member, i) => (
+                  {editFormData.members.map((member, i) => (
                     <li
                       key={i}
-                      className="flex justify-between items-center bg-[#1e293b] px-3 py-2 rounded-lg"
+                      className="flex justify-between items-center bg-[#1e293b] px-3 py-2 rounded-lg hover:bg-[#1e293b]/80 transition"
                     >
-                      <span>{member.name}</span>
+                      <span className="text-white">{member}</span>
                       <button
                         onClick={() => handleRemoveMember(i)}
                         className="text-red-400 hover:text-red-500 transition"
+                        type="button"
+                        title="Remove member from project"
                       >
                         <Trash2 size={18} />
                       </button>
@@ -665,69 +834,43 @@ export default function AdminProjects() {
                   ))}
                 </ul>
               )}
-
-              <button
-                onClick={() => setShowAddModal(true)}
-                className="flex items-center gap-2 mt-3  bg-[#0a1a59] hover:bg-[#0a1a89] transition text-white px-4 py-2 rounded-lg"
-              >
-                <Plus size={18} /> Add Member
-              </button>
+              
+              {editFormData.members.length > 0 && (
+                <p className="text-xs text-gray-500 mt-3 italic">
+                  ⚠️ Removing members will update the project when you save changes.
+                </p>
+              )}
             </div>
 
-            {/* Add Member Modal */}
-            {showAddModal && (
-              <div className="fixed inset-0 flex items-center justify-center bg-black/50">
-                <div className="bg-[#0f172a] border border-gray-600 rounded-xl p-6 w-80 text-white shadow-lg">
-                  <h2 className="text-lg font-semibold mb-3">Add New Member</h2>
-                  <input
-                    type="text"
-                    placeholder="Enter member name"
-                    value={newMemberName}
-                    onChange={(e) => setNewMemberName(e.target.value)}
-                    className="w-full bg-[#1e293b] border border-gray-500 rounded-lg px-3 py-2 mb-4 text-white outline-none focus:border-blue-500"
-                  />
-                  <div className="flex justify-end gap-3">
-                    <button
-                      onClick={() => setShowAddModal(false)}
-                      className="px-4 py-2 rounded-lg bg-gray-600 hover:bg-gray-500 transition"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={handleAddMember}
-                      className="px-4 py-2 rounded-lg bg-[#0a1a33] hover:bg-[#0a1a69] transition"
-                    >
-                      Add
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* conforming removal */}
+            {/* Confirm Remove Member Modal */}
             {removeIndex !== null && (
-              <div className="fixed inset-0 flex items-center justify-center bg-black/50">
-                <div className="bg-[#0f172a] border border-gray-600 rounded-xl p-6 w-80 text-white shadow-lg">
-                  <h2 className="text-lg font-semibold mb-3">Remove Member</h2>
+              <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
+                <div className="bg-[#0f172a] border border-gray-600 rounded-xl p-6 w-96 text-white shadow-lg">
+                  <h2 className="text-lg font-semibold mb-3 text-red-400">Remove Team Member</h2>
                   <p className="text-sm text-gray-300 mb-4">
                     Are you sure you want to remove{" "}
-                    <span className="font-semibold text-red-400">
-                      {members[removeIndex].name}
-                    </span>
-                    ?
+                    <span className="font-semibold text-white">
+                      {editFormData.members[removeIndex]}
+                    </span>{" "}
+                    from this project?
+                  </p>
+                  <p className="text-xs text-gray-400 mb-4 italic">
+                    This action will take effect when you save the project changes.
                   </p>
                   <div className="flex justify-end gap-3">
                     <button
                       onClick={() => setRemoveIndex(null)}
                       className="px-4 py-2 rounded-lg bg-gray-600 hover:bg-gray-500 transition"
+                      type="button"
                     >
                       Cancel
                     </button>
                     <button
                       onClick={confirmRemoveMember}
                       className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 transition"
+                      type="button"
                     >
-                      Remove
+                      Remove Member
                     </button>
                   </div>
                 </div>
@@ -750,10 +893,10 @@ export default function AdminProjects() {
               {selectedProject?.is_approved ? "Save Changes" : "Approve & Save"}
             </button>
           </div>
-         
         </form>
       </Modal>
 
+      {/* --- REJECT MODAL --- */}
       <Modal
         isOpen={isRejectModalOpen}
         onClose={() => setRejectModalOpen(false)}
@@ -784,6 +927,7 @@ export default function AdminProjects() {
         </form>
       </Modal>
 
+      {/* --- CONFIRMATION MODAL --- */}
       {confirmAction && (
         <Modal
           isOpen={isConfirmModalOpen}
@@ -859,29 +1003,29 @@ const apiCall = async (endpoint: string, options: RequestInit) => {
 
 const addProject = (projectData: typeof initialFormState) => {
   const payload = { ...projectData, is_approved: true };
-  return apiCall(`/add-project`, {
+  return apiCall(`/create-project`, {
     method: "POST",
     body: JSON.stringify(payload),
   });
 };
 
-const approveProject = (projectId: string, points: number) => {
+const approveProject = (projectId: string, projectData: typeof initialFormState) => {
   return apiCall(`/approve-project/${projectId}`, {
     method: "PUT",
-    body: JSON.stringify({ points }),
+    body: JSON.stringify({ ...projectData, is_approved: true, is_declined: false }),
   });
 };
 
 const rejectProject = (projectId: string, reason: string) => {
   return apiCall(`/decline-project/${projectId}`, {
-    method: "DELETE",
-    body: JSON.stringify({ reason }),
+    method: "PUT",
+    body: JSON.stringify({ is_declined: true, rejection_reason: reason }),
   });
 };
 
 const updateProject = (
   projectId: string,
-  updates: Partial<typeof initialFormState | { is_completed: boolean }>
+  updates: Partial<typeof initialFormState | { is_completed: boolean; is_declined: boolean }>
 ) => {
   return apiCall(`/edit-project/${projectId}`, {
     method: "PUT",
@@ -892,6 +1036,5 @@ const updateProject = (
 const deleteProject = (projectId: string) => {
   return apiCall(`/delete-project/${projectId}`, {
     method: "DELETE",
-    credentials: "include",
   });
 };
