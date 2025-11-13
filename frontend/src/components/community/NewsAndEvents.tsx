@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from "react";
 import { Newspaper } from "lucide-react";
+import PageLoader from "../common/PageLoader";
+import { usePageStatus } from "../../hooks/usePageStatus";
 
 interface NewsItem {
   id: string;
@@ -33,22 +35,23 @@ interface CommunityEventApiResponse {
 export default function NewsAndEvents() {
   const [news, setNews] = useState<NewsItem[]>([]);
   const [recentEvent, setRecentEvent] = useState<CommunityEvent | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+  const { isLoading, setLoading, handleError } = usePageStatus(
+    "Failed to load news and community events."
+  );
 
-  useEffect(() => {
-    const fetchData = async () => {
+  const fetchData = useCallback(async () => {
       try {
+        setLoading(true);
         // Fetch news
-        const newsResponse = await fetch('http://127.0.0.1:5000/api/news/news', {
-          method: 'GET',
+        const newsResponse = await fetch("http://127.0.0.1:5000/api/news/news", {
+          method: "GET",
           headers: {
-            'Content-Type': 'application/json'
-          }
+            "Content-Type": "application/json",
+          },
         });
 
         if (!newsResponse.ok) {
-          throw new Error('Failed to fetch news');
+          throw new Error("Failed to fetch news");
         }
 
         const newsData: NewsApiResponse = await newsResponse.json();
@@ -60,12 +63,12 @@ export default function NewsAndEvents() {
         setNews(sortedNews);
 
         // Fetch community events
-        const eventsResponse = await fetch('http://127.0.0.1:5000/api/community/events', {
-          method: 'GET',
+        const eventsResponse = await fetch("http://127.0.0.1:5000/api/community/events", {
+          method: "GET",
           headers: {
-            'Content-Type': 'application/json'
+            "Content-Type": "application/json",
           },
-          credentials: 'include'
+          credentials: "include",
         });
 
         if (eventsResponse.ok) {
@@ -78,32 +81,29 @@ export default function NewsAndEvents() {
             );
             setRecentEvent(sortedEvents[0]);
           }
+        } else if (eventsResponse.status === 404) {
+          setRecentEvent(null);
+        } else {
+          throw new Error("Failed to fetch community events");
         }
 
-        setLoading(false);
       } catch (err) {
-        console.error('Error fetching data:', err);
-        setError('Failed to load news and events');
+        console.error("Error fetching data:", err);
+        setNews([]);
+        setRecentEvent(null);
+        handleError(err, "Unable to load news and events.");
+      } finally {
         setLoading(false);
       }
-    };
+  }, [handleError, setLoading]);
 
+  useEffect(() => {
     fetchData();
-  }, []);
+  }, [fetchData]);
 
-  // Loading state
-  if (loading) return (
-    <div className="flex justify-center items-center min-h-screen">
-      <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-blue-500"></div>
-    </div>
-  );
-
-  // Error state
-  if (error) return (
-    <div className="flex justify-center items-center min-h-screen text-red-500">
-      {error}
-    </div>
-  );
+  if (isLoading) {
+    return <PageLoader message="Loading community highlights..." />;
+  }
 
   return (
     <section className="min-h-screen flex flex-col items-center p-5 bg-[#102a4e]/50">

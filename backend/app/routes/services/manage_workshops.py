@@ -4,9 +4,6 @@ from firebase_admin import firestore
 
 workshops_bp = Blueprint('workshops', __name__)
 
-# ===========================
-# GET ALL WORKSHOPS
-# ===========================
 @workshops_bp.route('/workshops', methods=["GET"])
 def get_workshops():
     try:
@@ -23,9 +20,7 @@ def get_workshops():
         return jsonify({'Msg': 'Internal Server Error', 'error': str(e)}), 500
 
 
-# ===========================
-# ADD WORKSHOP
-# ===========================
+
 @workshops_bp.route('/add-workshop', methods=["POST"])
 def add_workshop():
     try:
@@ -58,10 +53,6 @@ def add_workshop():
     except Exception as e:
         return jsonify({'msg': 'Internal Server Error', 'error': str(e)}), 500
 
-
-# ===========================
-# EDIT WORKSHOP
-# ===========================
 @workshops_bp.route('/edit-workshop/<id>', methods=["PUT"])
 def edit_workshop(id):
     try:
@@ -91,11 +82,7 @@ def edit_workshop(id):
         return jsonify({'msg': 'Workshop updated successfully'}), 200
     except Exception as e:
         return jsonify({'msg': 'Internal Server Error', 'error': str(e)}), 500
-
-
-# ===========================
-# DELETE WORKSHOP
-# ===========================
+        
 @workshops_bp.route('/delete-workshop/<id>', methods=["DELETE"])
 def delete_workshop(id):
     try:

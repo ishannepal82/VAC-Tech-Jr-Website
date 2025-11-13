@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { NavLink } from "react-router-dom";
 import { HashLink } from "react-router-hash-link";
 import { MailIcon } from "lucide-react";
 import Notification from "./Notification";
+import { useCurrentUser } from "../hooks/useCurrentUser";
 
 const NavLinkList = ({ onLinkClick, onMailClick }: any) => {
   const linkClassName =
@@ -58,9 +59,20 @@ const NavLinkList = ({ onLinkClick, onMailClick }: any) => {
   );
 };
 
+const getInitials = (name?: string) =>
+  name
+    ?.split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("") || "U";
+
 const NavBar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [openMail, setOpenMail] = useState(false);
+  const { user, isLoading } = useCurrentUser();
+
+  const userInitials = useMemo(() => getInitials(user?.name), [user?.name]);
 
   return (
     <>
@@ -75,14 +87,32 @@ const NavBar = () => {
             <p className="text-xl font-semibold text-white">Vac Tech Jr</p>
           </div>
 
-          <div className="hidden lg:flex items-center gap-14">
+          <div className="hidden lg:flex items-center gap-10">
             <div className="flex gap-x-14 cursor-pointer">
               <NavLinkList onMailClick={() => setOpenMail(true)} />
             </div>
 
-            <button className="cursor-pointer font-semibold text-primary border-2 rounded-lg px-4 py-2 border-white text-white hover:bg-white hover:text-[#0a1a33] transition">
-              Get Started
-            </button>
+            {user ? (
+              <div className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-full px-3 py-1.5">
+                <div className="h-10 w-10 rounded-full bg-[#5ea4ff] text-[#0a1a33] font-semibold flex items-center justify-center">
+                  {userInitials}
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-sm font-semibold text-white">
+                    {user.name}
+                  </span>
+                  <span className="text-xs text-white/60">
+                    {user.role || user.email}
+                  </span>
+                </div>
+              </div>
+            ) : isLoading ? (
+              <div className="h-10 w-32 rounded-full bg-white/10 animate-pulse" />
+            ) : (
+              <button className="cursor-pointer font-semibold text-primary border-2 rounded-lg px-4 py-2 border-white text-white hover:bg-white hover:text-[#0a1a33] transition">
+                Get Started
+              </button>
+            )}
           </div>
 
           <div className="lg:hidden">
@@ -128,9 +158,27 @@ const NavBar = () => {
                   setIsMenuOpen(false);
                 }}
               />
-              <button className="cursor-pointer font-semibold text-primary border-2 rounded-lg px-4 py-2 border-white text-white hover:bg-white hover:text-[#0a1a33] transition">
-                Get Started
-              </button>
+              {user ? (
+                <div className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-2xl px-3 py-2 mt-4">
+                  <div className="h-10 w-10 rounded-full bg-[#5ea4ff] text-[#0a1a33] font-semibold flex items-center justify-center">
+                    {userInitials}
+                  </div>
+                  <div className="flex flex-col text-left">
+                    <span className="text-sm font-semibold text-white">
+                      {user.name}
+                    </span>
+                    <span className="text-xs text-white/60">
+                      {user.role || user.email}
+                    </span>
+                  </div>
+                </div>
+              ) : isLoading ? (
+                <div className="h-10 w-32 rounded-full bg-white/10 animate-pulse" />
+              ) : (
+                <button className="cursor-pointer font-semibold text-primary border-2 rounded-lg px-4 py-2 border-white text-white hover:bg-white hover:text-[#0a1a33] transition">
+                  Get Started
+                </button>
+              )}
             </div>
           </div>
         )}

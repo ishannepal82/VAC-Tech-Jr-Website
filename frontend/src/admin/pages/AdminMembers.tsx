@@ -1,8 +1,10 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { Search, Edit, Trash2, Plus, Filter } from "lucide-react";
 import MemberRankBadge from "../components/MemberRankBadge";
 import Modal from "../components/Modal";
 import { useAdminData } from "../context/AdminDataContext";
+import PageLoader from "../../components/common/PageLoader";
+import { usePageStatus } from "../../hooks/usePageStatus";
 
 type Role = "Member" | "Head";
 type Committee = "None" | "PR" | "ECA" | "Coding" | "Graphics" | "Bod";
@@ -31,6 +33,9 @@ export default function AdminMembers() {
   // Add updateMember to the destructuring assignment
   const { members, addMember, getMembers, deleteMember, updateMember } =
     useAdminData();
+  const { isLoading, setLoading, handleError } = usePageStatus(
+    "Failed to load members."
+  );
 
   const [searchTerm, setSearchTerm] = useState("");
   const [filters, setFilters] = useState({ role: "All", committee: "All" });
@@ -48,9 +53,21 @@ export default function AdminMembers() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [memberToDelete, setMemberToDelete] = useState<string | null>(null);
 
+  const loadMembers = useCallback(async () => {
+    try {
+      setLoading(true);
+      await getMembers();
+    } catch (error) {
+      console.error("Error loading members:", error);
+      handleError(error, "Unable to fetch members.");
+    } finally {
+      setLoading(false);
+    }
+  }, [getMembers, handleError, setLoading]);
+
   useEffect(() => {
-    getMembers();
-  }, []);
+    loadMembers();
+  }, [loadMembers]);
 
   const handleOpenModal = (member: Member | null = null) => {
     setEditingMember(member);
@@ -88,35 +105,35 @@ export default function AdminMembers() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    try {
+      if (editingMember) {
+        await updateMember(editingMember.id!, {
+          name,
+          email,
+          role,
+          committee,
+          is_admin,
+          memo_tokens,
+          points,
+          ...(password && { password }),
+        });
+      } else {
+        await addMember(
+          name,
+          email,
+          password,
+          role,
+          committee,
+          is_admin,
+          memo_tokens
+        );
+      }
 
-    if (editingMember) {
-      // ✅ EDIT MODE
-      // We call a new 'updateMember' function from the context
-      await updateMember(editingMember.id!, {
-        name,
-        email,
-        role,
-        committee,
-        is_admin,
-        memo_tokens,
-        points,
-        ...(password && { password }),
-      });
-    } else {
-      // ✅ ADD MODE (existing logic)
-      await addMember(
-        name,
-        email,
-        password,
-        role,
-        committee,
-        is_admin,
-        memo_tokens
-      );
+      await loadMembers(); // refresh list after action
+      handleCloseModal();
+    } catch (error) {
+      console.error("Failed to submit member form:", error);
     }
-
-    await getMembers(); // refresh list after action
-    handleCloseModal();
   };
 
   // This function opens the confirmation modal
@@ -128,8 +145,12 @@ export default function AdminMembers() {
   // This function runs when the user confirms the deletion
   const confirmDelete = async () => {
     if (memberToDelete) {
-      await deleteMember(memberToDelete);
-      // No need to call getMembers() if deleteMember already updates the state in your context
+      try {
+        await deleteMember(memberToDelete);
+        await loadMembers();
+      } catch (error) {
+        console.error("Failed to delete member:", error);
+      }
     }
     // Close the modal and reset the state
     setIsDeleteModalOpen(false);
@@ -157,6 +178,10 @@ export default function AdminMembers() {
           filters.committee === "All" || member.committee === filters.committee
       );
   }, [searchTerm, filters, members]);
+
+  if (isLoading) {
+    return <PageLoader message="Loading members..." />;
+  }
 
   return (
     <div className="bg-[#1e293b] p-6 rounded-lg shadow-lg">

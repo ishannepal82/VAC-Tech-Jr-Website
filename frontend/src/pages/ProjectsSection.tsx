@@ -1,8 +1,9 @@
 import { Search, Filter, ArrowRight, Gem } from "lucide-react";
 import { Link } from "react-router-dom";
 import CountUp from "react-countup";
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
+import { useCallback, useEffect, useState } from "react";
+import PageLoader from "../components/common/PageLoader";
+import { usePageStatus } from "../hooks/usePageStatus";
 // --- IMPORTANT: Update your Project type to match the new API response ---
 // You should have this in a separate file like `src/data/projects.ts`
 export interface Project {
@@ -91,17 +92,23 @@ const ProjectCard = ({ project }: { project: Project }) => {
 export default function ProjectsSection() {
   const [completedProjects, setCompletedProjects] = useState<Project[]>([]);
   const [availableProjects, setAvailableProjects] = useState<Project[]>([]);
+  const { isLoading, setLoading, handleError } = usePageStatus(
+    "Failed to load projects."
+  );
 
-  const handleFetch = async () => {
+  const handleFetch = useCallback(async () => {
     try {
+      setLoading(true);
       const baseUrl = "http://127.0.0.1:5000";
       const res = await fetch(`${baseUrl}/api/projects/get-approved-projects`);
 
       if (!res.ok) {
         console.error("Error Fetching Data:", res);
-        if (res.status === 400) {
-          toast.error("You are not allowed to join in the project.");
-        }
+        const message =
+          res.status === 400
+            ? "You are not allowed to join the project."
+            : "Failed to fetch projects data.";
+        handleError(new Error(message), message);
         return;
       }
       const data = await res.json();
@@ -119,12 +126,19 @@ export default function ProjectsSection() {
       setAvailableProjects(available);
     } catch (error) {
       console.error("Error Fetching Data:", error);
+      handleError(error, "Unable to load projects.");
+    } finally {
+      setLoading(false);
     }
-  };
+  }, [handleError, setLoading]);
 
   useEffect(() => {
     handleFetch();
-  }, []);
+  }, [handleFetch]);
+
+  if (isLoading) {
+    return <PageLoader message="Loading projects..." />;
+  }
 
   return (
     <section

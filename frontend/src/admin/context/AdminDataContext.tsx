@@ -2,8 +2,6 @@ import { createContext, useState, useContext } from "react";
 import type { ReactNode } from "react";
 import { toast } from "sonner";
 
-import { useNavigate } from "react-router-dom";
-
 type Role = "Member" | "Head";
 type Committee = "None" | "PR" | "ECA" | "Coding" | "Graphics" | "Bod";
 
@@ -48,8 +46,6 @@ const AdminDataContext = createContext<AdminDataContextType | undefined>(
 
 export const AdminDataProvider = ({ children }: { children: ReactNode }) => {
   const [members, setMembers] = useState<Member[]>([]);
-  const [_loading, setLoading] = useState(false);
-  const navigate = useNavigate();
 
   // ✅ Common error handler for fetch calls
   const handleResponseError = async (res: Response, fallbackMsg: string) => {
@@ -57,22 +53,15 @@ export const AdminDataProvider = ({ children }: { children: ReactNode }) => {
     try {
       errorData = await res.json();
     } catch {
-      errorData = { msg: fallbackMsg };
+      // ignore parsing errors
     }
 
-    setLoading(false);
-
-    if (res.status === 500)
-      toast.error("Internal Server Error, Please try again!");
-    else if (res.status === 401)
-      toast.error("Invalid Credentials, You are not authorized!");
-    else if (res.status === 404) toast.error("Requested resource not found!");
-    else if (res.status === 400)
-      toast.error("Bad Request, Please check your input!");
-    else if (res.status === 409) toast.error("Email already exists!");
-    else toast.error(errorData["msg"] || fallbackMsg);
-
-    console.error("❌ Backend Error:", errorData);
+    const message =
+      errorData?.msg ||
+      errorData?.message ||
+      fallbackMsg ||
+      `Request failed with status ${res.status}`;
+    throw new Error(message);
   };
 
   const addMember = async (
@@ -101,7 +90,9 @@ export const AdminDataProvider = ({ children }: { children: ReactNode }) => {
         }),
       });
 
-      if (!res.ok) return await handleResponseError(res, "Failed to add user");
+      if (!res.ok) {
+        await handleResponseError(res, "Failed to add user");
+      }
 
       const data = await res.json();
       console.log("✅ User added:", data);
@@ -109,7 +100,8 @@ export const AdminDataProvider = ({ children }: { children: ReactNode }) => {
       toast.success("User added successfully");
     } catch (e) {
       console.error("❌ Error adding user:", e);
-      toast.error("Failed to add user");
+      toast.error(e instanceof Error ? e.message : "Failed to add user");
+      throw e;
     }
   };
 
@@ -139,6 +131,7 @@ export const AdminDataProvider = ({ children }: { children: ReactNode }) => {
       setMembers(fetchedMembers);
     } catch (e) {
       console.error("❌ Error fetching users:", e);
+      throw e;
     }
   };
 
@@ -153,14 +146,16 @@ export const AdminDataProvider = ({ children }: { children: ReactNode }) => {
         }
       );
 
-      if (!res.ok)
-        return await handleResponseError(res, "Failed to delete user");
+      if (!res.ok) {
+        await handleResponseError(res, "Failed to delete user");
+      }
 
       setMembers((prev) => prev.filter((u) => u.id !== id));
       toast.success("User deleted successfully");
     } catch (e) {
       console.error("❌ Error deleting user:", e);
-      toast.error("Failed to delete user");
+      toast.error(e instanceof Error ? e.message : "Failed to delete user");
+      throw e;
     }
   };
 
@@ -180,8 +175,6 @@ export const AdminDataProvider = ({ children }: { children: ReactNode }) => {
 
       if (!res.ok) {
         await handleResponseError(res, "Failed to update member");
-        toast.dismiss(toastId);
-        return;
       }
 
       toast.success(
@@ -196,7 +189,11 @@ export const AdminDataProvider = ({ children }: { children: ReactNode }) => {
       );
     } catch (e: any) {
       console.error("❌ Error updating member:", e);
-      toast.error(e.message || "Failed to update member", { id: toastId });
+      toast.error(
+        e instanceof Error ? e.message : "Failed to update member",
+        { id: toastId }
+      );
+      throw e;
     }
   };
 
