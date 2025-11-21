@@ -1,6 +1,8 @@
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Plus, Edit, Trash2 } from "lucide-react";
 import Modal from "../components/Modal";
+import PageLoader from "../../components/common/PageLoader";
+import { usePageStatus } from "../../hooks/usePageStatus";
 
 // Define type for better safety
 interface BoardMember {
@@ -39,15 +41,17 @@ export default function AdminAbout() {
   const [members, setMembers] = useState<BoardMember[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<BoardMember | null>(null);
-  const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState({ isVisible: false, message: "", isError: false });
+  const { isLoading, setLoading, handleError } = usePageStatus(
+    "Failed to load board members."
+  );
 
   const showToast = (message: string, isError = false) => {
     setToast({ message, isError, isVisible: true });
     setTimeout(() => setToast((prev) => ({ ...prev, isVisible: false })), 3000);
   };
 
-  const fetchMembers = async () => {
+  const fetchMembers = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch("http://127.0.0.1:5000/api/bod/bod", {
@@ -59,16 +63,16 @@ export default function AdminAbout() {
       setMembers(Array.isArray(data.bod) ? data.bod : []);
     } catch (error) {
       console.error("Fetch error:", error);
-      showToast("Failed to load board members", true);
       setMembers([]);
+      handleError(error, "Unable to load board members.");
     } finally {
       setLoading(false);
     }
-  };
+  }, [handleError, setLoading]);
 
   useEffect(() => {
     fetchMembers();
-  }, []);
+  }, [fetchMembers]);
 
   const handleOpenModal = (member: BoardMember | null = null) => {
     setEditingMember(member);
@@ -107,7 +111,7 @@ export default function AdminAbout() {
 
       showToast(editingMember ? "Member updated successfully!" : "Member added successfully!");
       handleCloseModal();
-      fetchMembers();
+      await fetchMembers();
     } catch (error: any) {
       console.error("Save error:", error);
       showToast(`Failed to save member: ${error.message}`, true);
@@ -133,12 +137,8 @@ export default function AdminAbout() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="bg-[#1e293b] p-6 rounded-lg shadow-lg flex justify-center items-center h-64">
-        <div className="text-white">Loading board members...</div>
-      </div>
-    );
+  if (isLoading) {
+    return <PageLoader message="Loading board members..." />;
   }
 
   return (

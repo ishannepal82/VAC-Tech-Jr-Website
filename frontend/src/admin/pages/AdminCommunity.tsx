@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from "react";
 import { Plus, Edit, Trash2, X, Upload, AlertTriangle, CheckCircle, XCircle } from "lucide-react";
+import PageLoader from "../../components/common/PageLoader";
+import { usePageStatus } from "../../hooks/usePageStatus";
 
 // Type definitions
 interface NewsItem {
@@ -69,7 +71,9 @@ interface Toast {
 export default function AdminCommunity() {
   const [news, setNews] = useState<NewsItem[]>([]);
   const [communityEvents, setCommunityEvents] = useState<CommunityEvent[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const { isLoading, setLoading, handleError } = usePageStatus(
+    "Failed to load community management data."
+  );
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [toasts, setToasts] = useState<Toast[]>([]);
   
@@ -125,96 +129,89 @@ export default function AdminCommunity() {
     setToasts(prev => prev.filter(toast => toast.id !== id));
   };
 
-  // Fetch news
-  useEffect(() => {
-    const fetchNews = async () => {
-      try {
-        const response = await fetch('http://127.0.0.1:5000/api/news/news', {
-          method: 'GET',
+  const loadInitialData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const [newsResponse, eventsResponse] = await Promise.all([
+        fetch("http://127.0.0.1:5000/api/news/news", {
+          method: "GET",
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-            'Content-Type': 'application/json'
-          }
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch news');
-        }
-
-        const data: NewsApiResponse = await response.json();
-        
-        const transformedNews: NewsItem[] = data.news.map(item => ({
-          id: item.id,
-          title: item.title,
-          summary: item.description,
-          imageUrl: item.image_url,
-          date: new Date(item.created_at._seconds * 1000).toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric'
-          })
-        }));
-
-        setNews(transformedNews);
-      } catch (err) {
-        console.error('Error fetching news:', err);
-        showToast('error', 'Failed to fetch news');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchNews();
-  }, []);
-
-  // Fetch community events
-  useEffect(() => {
-    const fetchCommunityEvents = async () => {
-      try {
-        const response = await fetch('http://127.0.0.1:5000/api/community/events', {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json'
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            "Content-Type": "application/json",
           },
-          credentials: 'include'
-        });
+        }),
+        fetch("http://127.0.0.1:5000/api/community/events", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+        }),
+      ]);
 
-        if (!response.ok) {
-          if (response.status === 404) {
-            setCommunityEvents([]);
-            return;
+      if (!newsResponse.ok) {
+        throw new Error("Failed to fetch news");
+      }
+
+      const newsPayload: NewsApiResponse = await newsResponse.json();
+      const transformedNews: NewsItem[] = newsPayload.news.map((item) => ({
+        id: item.id,
+        title: item.title,
+        summary: item.description,
+        imageUrl: item.image_url,
+        date: new Date(item.created_at._seconds * 1000).toLocaleDateString(
+          "en-US",
+          {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
           }
-          throw new Error('Failed to fetch community events');
+        ),
+      }));
+      setNews(transformedNews);
+
+      if (eventsResponse.status === 404) {
+        setCommunityEvents([]);
+      } else {
+        if (!eventsResponse.ok) {
+          throw new Error("Failed to fetch community events");
         }
 
-        const data: CommunityEventApiResponse = await response.json();
-        
-        if (!data.events || data.events.length === 0) {
-          setCommunityEvents([]);
-          return;
-        }
+        const eventsPayload: CommunityEventApiResponse = await eventsResponse.json();
+        const eventsList = Array.isArray(eventsPayload.events)
+          ? eventsPayload.events
+          : [];
 
-        const transformedEvents: CommunityEvent[] = data.events.map(item => ({
+        const transformedEvents: CommunityEvent[] = eventsList.map((item) => ({
           id: item.id,
           title: item.title,
           summary: item.description,
           imageUrl: item.image_url,
-          date: new Date(item.created_at._seconds * 1000).toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric'
-          })
+          date: new Date(item.created_at._seconds * 1000).toLocaleDateString(
+            "en-US",
+            {
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+            }
+          ),
         }));
 
         setCommunityEvents(transformedEvents);
-      } catch (err) {
-        console.error('Error fetching community events:', err);
-        setCommunityEvents([]);
       }
-    };
+    } catch (err) {
+      console.error("Error loading community data:", err);
+      setNews([]);
+      setCommunityEvents([]);
+      handleError(err, "Unable to load community management data.");
+    } finally {
+      setLoading(false);
+    }
+  }, [handleError, setLoading]);
 
-    fetchCommunityEvents();
-  }, []);
+  useEffect(() => {
+    loadInitialData();
+  }, [loadInitialData]);
 
   // Handle form input changes
   const handleNewsInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -561,11 +558,9 @@ export default function AdminCommunity() {
   };
 
   // Loading State
-  if (loading) return (
-    <div className="flex justify-center items-center h-screen bg-[#0f172a]">
-      <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-blue-500"></div>
-    </div>
-  );
+  if (isLoading) {
+    return <PageLoader message="Loading community manager..." />;
+  }
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 relative bg-[#0f172a] min-h-screen p-8">

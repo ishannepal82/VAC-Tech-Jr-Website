@@ -1,7 +1,6 @@
 // src/pages/DashboardPage.tsx
 
-import React, { useState } from "react";
-import { useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import CountUp from "react-countup";
 import {
   User,
@@ -14,12 +13,16 @@ import {
   Plus,
 } from "lucide-react";
 import CreateProjectModal from "../components/CreateProjectModal";
+import PageLoader from "../components/common/PageLoader";
+import { usePageStatus } from "../hooks/usePageStatus";
 
 export default function DashboardPage() {
   // FIX 1: Change type to `any` to allow for numbers (points, etc.) and strings from API.
   const [data, setData] = useState<{ [key: string]: any }>({});
-  const [loading, setLoading] = useState(true); // Renamed _loading to loading for clarity
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const { isLoading, setLoading, handleError } = usePageStatus(
+    "Failed to load dashboard data."
+  );
 
   // This static data is fine for parts of the UI not driven by the API (like workshops, contributions)
   const memberData = {
@@ -100,20 +103,17 @@ export default function DashboardPage() {
         setData(userData || {}); // Use empty object as fallback
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
+        handleError(error, "Unable to load dashboard data.");
       } finally {
         setLoading(false);
       }
     };
     fetchData();
-  }, []);
+  }, [handleError, setLoading]);
 
   // Show a loading screen while data is being fetched to prevent errors
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#0a1a33] flex items-center justify-center text-white text-xl font-poppins">
-        Loading Dashboard...
-      </div>
-    );
+  if (isLoading) {
+    return <PageLoader message="Loading Dashboard..." />;
   }
 
   return (

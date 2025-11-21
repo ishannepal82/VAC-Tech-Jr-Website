@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { FormEvent, ChangeEvent } from "react";
 import type { Project } from "../../data/projects";
 import {
@@ -8,13 +8,14 @@ import {
   Edit,
   Trash2,
   Archive,
-  Loader2,
   AlertTriangle,
   XCircle,
 } from "lucide-react";
 import Tabs from "../components/Tabs";
 import Modal from "../components/Modal";
 import { toast } from "sonner";
+import PageLoader from "../../components/common/PageLoader";
+import { usePageStatus } from "../../hooks/usePageStatus";
 
 const initialFormState = {
   title: "",
@@ -45,7 +46,9 @@ export default function AdminProjects() {
   const [addFormData, setAddFormData] = useState(initialFormState);
   const [editFormData, setEditFormData] = useState(initialFormState);
   const [rejectionReason, setRejectionReason] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
+  const { isLoading, setLoading, handleError } = usePageStatus(
+    "Failed to load project data."
+  );
 
   // Confirmation dialog state
   const [isConfirmModalOpen, setConfirmModalOpen] = useState(false);
@@ -75,8 +78,8 @@ export default function AdminProjects() {
   };
 
   // --- DATA FETCHING ---
-  const handleFetch = async () => {
-    setIsLoading(true);
+  const handleFetch = useCallback(async () => {
+    setLoading(true);
     try {
       const res = await fetch("http://127.0.0.1:5000/api/projects/projects", {
         credentials: "include",
@@ -96,15 +99,15 @@ export default function AdminProjects() {
       setDeclinedProjects(projects.filter((p) => p.is_declined));
     } catch (error) {
       console.error("Error Fetching Data:", error);
-      toast.error("Failed to fetch project data.");
+      handleError(error, "Unable to load project data.");
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
-  };
+  }, [handleError, setLoading]);
 
   useEffect(() => {
     handleFetch();
-  }, []);
+  }, [handleFetch]);
 
   // --- FORM & ACTION HANDLERS ---
   const handleAddFormChange = (
@@ -258,6 +261,10 @@ export default function AdminProjects() {
     setRejectModalOpen(true);
   };
 
+  if (isLoading) {
+    return <PageLoader message="Loading project data..." />;
+  }
+
   return (
     <div className="bg-[#1e293b] p-6 rounded-lg shadow-lg text-white">
       <div className="flex items-center justify-between mb-6">
@@ -270,19 +277,14 @@ export default function AdminProjects() {
         </button>
       </div>
 
-      {isLoading ? (
-        <div className="flex justify-center items-center h-64">
-          <Loader2 size={48} className="animate-spin text-gray-400" />
-        </div>
-      ) : (
-        <Tabs
-          tabNames={[
-            "Pending Requests",
-            "Approved Projects",
-            "Completed Projects",
-            "Declined Projects",
-          ]}
-        >
+      <Tabs
+        tabNames={[
+          "Pending Requests",
+          "Approved Projects",
+          "Completed Projects",
+          "Declined Projects",
+        ]}
+      >
           {/* Tab 1: Approval Requests (Pending) */}
           <div className="space-y-4">
             {approvalRequests.length > 0 ? (
@@ -485,8 +487,7 @@ export default function AdminProjects() {
               </div>
             )}
           </div>
-        </Tabs>
-      )}
+      </Tabs>
 
       {/* --- ADD PROJECT MODAL --- */}
       <Modal

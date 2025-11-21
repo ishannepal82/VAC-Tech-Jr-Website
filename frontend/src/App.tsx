@@ -25,6 +25,8 @@ import AdminSettings from "./admin/pages/AdminSettings";
 // import Notification from "./components/Notification";
 import PreLoginLanding from "./pages/Landing";
 import Intruder from "./pages/intruder";
+import ErrorFallback from "./pages/ErrorFallback";
+import { Toaster } from "sonner";
 
 const PublicLayout = () => (
   <>
@@ -37,10 +39,12 @@ const PublicLayout = () => (
 function App() {
   return (
     <BrowserRouter>
+      <Toaster richColors position="top-center" />
       <ScrollToTop />
       <Routes>
         <Route path="/auth" element={<AuthPage />} />
         <Route path="/intruder" element={<Intruder />} />
+        <Route path="/error" element={<ErrorFallback />} />
 
         <Route element={<PublicLayout />}>
           <Route index element={<PreLoginLanding />} />

@@ -1,7 +1,9 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Calendar from "react-calendar";
 import { Clock, MapPin } from "lucide-react";
 import "../styles/Calendar.css";
+import PageLoader from "../components/common/PageLoader";
+import { usePageStatus } from "../hooks/usePageStatus";
 
 type EventCategory = "important" | "collaboration" | "meeting" | "other";
 
@@ -32,50 +34,54 @@ const categoryColorMap: Record<EventCategory, string> = {
 
 export default function EventsPage() {
   const [events, setEvents] = useState<Event[]>([]);
-  const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const eventRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const { isLoading, setLoading, handleError } = usePageStatus(
+    "Failed to load events."
+  );
 
   // Fetch events from backend
+  const fetchEvents = useCallback(async () => {
+      try {
+        setLoading(true);
+        const res = await fetch("http://127.0.0.1:5000/api/events/events", {
+          method: "GET",
+          credentials: "include",
+        });
+
+        if (!res.ok) throw new Error("Failed to fetch events");
+
+        const data = await res.json();
+
+        // Make sure data.events exists and is an array
+        if (!Array.isArray(data.events)) throw new Error("Invalid data format");
+
+        const parsedEvents: Event[] = data.events.map((ev: any) => ({
+          id: ev.id,
+          title: ev.name, // map backend `name` to title
+          description: ev.description,
+          date: new Date(ev.date), // convert string to Date
+          time: ev.time,
+          location: ev.venue, // map backend `venue` to location
+          category: "other", // optional default category
+          status: ev.status
+            ? ev.status.charAt(0).toUpperCase() + ev.status.slice(1) // "upcoming" -> "Upcoming"
+            : "Upcoming",
+        }));
+
+        setEvents(parsedEvents);
+      } catch (error) {
+        console.error("Error fetching events:", error);
+        setEvents([]); // fallback
+        handleError(error, "Unable to fetch events.");
+      } finally {
+        setLoading(false);
+      }
+  }, [handleError, setLoading]);
+
   useEffect(() => {
-    const fetchEvents = async () => {
-  try {
-    const res = await fetch("http://127.0.0.1:5000/api/events/events", {
-      method: "GET",
-      credentials: "include",
-    });
-
-    if (!res.ok) throw new Error("Failed to fetch events");
-
-    const data = await res.json();
-
-    // Make sure data.events exists and is an array
-    if (!Array.isArray(data.events)) throw new Error("Invalid data format");
-
-    const parsedEvents: Event[] = data.events.map((ev: any) => ({
-      id: ev.id,
-      title: ev.name,           // map backend `name` to title
-      description: ev.description,
-      date: new Date(ev.date),  // convert string to Date
-      time: ev.time,
-      location: ev.venue,       // map backend `venue` to location
-      category: "other",        // optional default category
-      status: ev.status
-        ? ev.status.charAt(0).toUpperCase() + ev.status.slice(1) // "upcoming" -> "Upcoming"
-        : "Upcoming",
-    }));
-
-    setEvents(parsedEvents);
-  } catch (error) {
-    console.error("Error fetching events:", error);
-    setEvents([]); // fallback
-  } finally {
-    setLoading(false);
-  }
-};
-
     fetchEvents();
-  }, []);
+  }, [fetchEvents]);
 
   // Scroll to first upcoming event of the selected date
   const upcomingEvents = events
@@ -93,6 +99,10 @@ export default function EventsPage() {
       });
     }
   }, [selectedDate, upcomingEvents]);
+
+  if (isLoading) {
+    return <PageLoader message="Loading events..." />;
+  }
 
   return (
     <section className="min-h-screen w-full bg-[#0a1a33] text-white font-poppins py-12 px-4 sm:px-6 lg:px-8">
@@ -143,9 +153,7 @@ export default function EventsPage() {
           <div className="lg:w-2/5 flex flex-col">
             <h2 className="text-3xl font-bold text-white mb-4">Upcoming Events</h2>
             <div className="flex flex-col gap-4 max-h-[65vh] overflow-y-auto pr-3 -mr-3">
-              {loading ? (
-                <p className="text-gray-400 text-center mt-10">Loading events...</p>
-              ) : upcomingEvents.length === 0 ? (
+              {upcomingEvents.length === 0 ? (
                 <div className="bg-[#112240] p-6 rounded-xl border-2 border-dashed border-[#1a2f55] text-center">
                   <p className="text-gray-400 text-lg">
                     No upcoming events scheduled.

@@ -1,38 +1,52 @@
 // src/pages/ProjectDetailPage.tsx
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Github, Calendar, Award, ChevronLeft } from "lucide-react";
 import type { Project } from "../data/projects";
 import { toast } from "sonner";
+import PageLoader from "../components/common/PageLoader";
+import { usePageStatus } from "../hooks/usePageStatus";
 
 export default function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [project, setProject] = useState<Project | null>(null);
   const [joining, setJoining] = useState(false);
-  const [joinMessage, setJoinMessage] = useState<string | null>(null);
+  const { isLoading, setLoading, handleError } = usePageStatus(
+    "Failed to load project details."
+  );
 
   // Fetch project details
-  const fetchProjectById = async (projectId: string | undefined) => {
-    if (!projectId) return;
+  const fetchProjectById = useCallback(async (projectId: string | undefined) => {
+    if (!projectId) {
+      handleError(new Error("Project ID is missing."), "Project not found.");
+      return;
+    }
+
     try {
+      setLoading(true);
       const res = await fetch(
         `http://127.0.0.1:5000/api/projects/get-project/${projectId}`
       );
       if (!res.ok) throw new Error("Failed to fetch project");
       const data = await res.json();
+      if (!data?.project) {
+        throw new Error("Project not found.");
+      }
       setProject(data.project);
     } catch (e) {
       console.error("Fetch error:", e);
       setProject(null);
+      handleError(e, "Unable to load project details.");
+    } finally {
+      setLoading(false);
     }
-  };
+  }, [handleError, setLoading]);
 
   // 🔹 Join project handler
   const joinProject = async () => {
     if (!id) return;
 
     setJoining(true);
-    setJoinMessage(null);
 
     try {
       const res = await fetch(
@@ -65,15 +79,10 @@ export default function ProjectDetailPage() {
 
   useEffect(() => {
     fetchProjectById(id);
-  }, [id]);
+  }, [fetchProjectById, id]);
 
-  // Loading state
-  if (project === undefined) {
-    return (
-      <div className="h-screen w-full bg-[#0a1a33] text-white flex items-center justify-center">
-        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-white"></div>
-      </div>
-    );
+  if (isLoading) {
+    return <PageLoader message="Loading project details..." />;
   }
 
   // Not Found state
@@ -204,9 +213,6 @@ export default function ProjectDetailPage() {
                   >
                     {joining ? "Joining..." : "Join Project"}
                   </button>
-                  {joinMessage && (
-                    <p className="text-sm mt-2 text-[#9cc9ff]">{joinMessage}</p>
-                  )}
                 </>
               ) : (
                 <a

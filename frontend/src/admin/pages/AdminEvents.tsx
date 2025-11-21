@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Plus,
   Edit,
@@ -10,11 +10,17 @@ import {
 } from "lucide-react";
 import Tabs from "../components/Tabs";
 import Modal from "../components/Modal";
+import PageLoader from "../../components/common/PageLoader";
+import { usePageStatus } from "../../hooks/usePageStatus";
+import { toast } from "sonner";
 
 export default function AdminEvents() {
   const [events, setEvents] = useState<any[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<any | null>(null);
+  const { isLoading, setLoading, handleError } = usePageStatus(
+    "Failed to load events."
+  );
 
   const [formData, setFormData] = useState({
     name: "",
@@ -26,26 +32,30 @@ export default function AdminEvents() {
     status: "upcoming",
   });
 
-  // Fetch events on mount
+  const fetchEvents = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await fetch("http://127.0.0.1:5000/api/events/events", {
+        method: "GET",
+        credentials: "include",
+      });
+
+      if (!res.ok) throw new Error("Failed to fetch events");
+
+      const data = await res.json();
+      setEvents(Array.isArray(data.events) ? data.events : []);
+    } catch (error) {
+      console.error("Error fetching events:", error);
+      setEvents([]);
+      handleError(error, "Unable to load events.");
+    } finally {
+      setLoading(false);
+    }
+  }, [handleError, setLoading]);
+
   useEffect(() => {
-    const fetchEvents = async () => {
-      try {
-        const res = await fetch("http://127.0.0.1:5000/api/events/events", {
-          method: "GET",
-          credentials: "include",
-        });
-
-        if (!res.ok) throw new Error("Failed to fetch events");
-
-        const data = await res.json();
-        setEvents(data.events); // directly assign the array
-      } catch (error) {
-        console.error("Error fetching events:", error);
-      }
-    };
-
     fetchEvents();
-  }, []);
+  }, [fetchEvents]);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -72,14 +82,6 @@ export default function AdminEvents() {
         throw new Error(err?.msg || "Failed to save event");
       }
 
-      if (editingEvent) {
-        setEvents(
-          events.map((ev) => (ev.id === editingEvent.id ? { ...ev, ...formData } : ev))
-        );
-      } else {
-        setEvents([...events, { ...formData, status: "upcoming" }]);
-      }
-
       setIsModalOpen(false);
       setEditingEvent(null);
       setFormData({
@@ -91,9 +93,13 @@ export default function AdminEvents() {
         banner: "",
         status: "upcoming",
       });
+      toast.success(`Event ${editingEvent ? "updated" : "created"} successfully.`);
+      await fetchEvents();
     } catch (error) {
       console.error("Error saving event:", error);
-      alert("Failed to save event. Please try again.");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to save event. Please try again."
+      );
     }
   };
   // Add this function inside your AdminEvents component
@@ -112,11 +118,13 @@ const deleteEvent = async (id: string) => {
     }
 
     // Remove deleted event from local state
-    setEvents((prev) => prev.filter((event) => event.id !== id));
-    alert("Event deleted successfully");
+    toast.success("Event deleted successfully.");
+    await fetchEvents();
   } catch (error) {
     console.error("Error deleting event:", error);
-    alert("Failed to delete event. Please try again.");
+    toast.error(
+      error instanceof Error ? error.message : "Failed to delete event. Please try again."
+    );
   }
 };
 
@@ -171,6 +179,10 @@ const deleteEvent = async (id: string) => {
       <p className="text-gray-400 text-sm">Status: {event.status}</p>
     </div>
   );
+
+  if (isLoading) {
+    return <PageLoader message="Loading events..." />;
+  }
 
   return (
     <div className="bg-[#1e293b] p-6 rounded-lg shadow-lg">
