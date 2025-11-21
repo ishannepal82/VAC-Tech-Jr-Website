@@ -44,7 +44,7 @@ const NavLinkList = ({ onLinkClick, onMailClick }: any) => {
         Dashboard
       </NavLink>
       <NavLink to="/admin" className={linkClassName} onClick={handleClick}>
-        Pannel
+        Panel
       </NavLink>
 
       <button
