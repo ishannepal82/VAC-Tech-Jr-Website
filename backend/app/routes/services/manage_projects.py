@@ -55,7 +55,7 @@ def get_approved_projects():
         }), 200
 
     except Exception as e:
-        print(f"Error in get_approved_projects: {str(e)}")  # For debugging
+        print(f"Error in get_approved_projects: {str(e)}")  
         return jsonify({
             'msg': 'Internal server error',
             'error': str(e)
@@ -100,7 +100,6 @@ def create_project():
             if not isinstance(data[field], expected_type):
                 return jsonify({'msg': f"Field '{field}' must be of type {expected_type.__name__}"}), 400
 
-        # Validate required_members is positive
         if data["required_members"] < 1:
             return jsonify({'msg': 'required_members must be at least 1'}), 400
 
@@ -116,38 +115,31 @@ def create_project():
         start_str = match.group(1)
         end_str = match.group(2)
 
-        # Validate and parse dates
         try:
             start_date = datetime.datetime.fromisoformat(start_str)
             end_date = datetime.datetime.fromisoformat(end_str) if end_str else None
         except ValueError as e:
             return jsonify({'msg': f'Invalid date: {str(e)}'}), 400
 
-        # Ensure end date is not before start date
         if end_date and end_date < start_date:
             return jsonify({'msg': 'End date cannot be before start date'}), 400
 
-        # ✅ Store as STRING (to match what your GET endpoint expects!)
-        # Your frontend and GET route expect a string like "2024-03-04 to 2025-06-10"
         if end_str:
             display_timeframe = f"{start_str} to {end_str}"
         else:
             display_timeframe = start_str
 
-        # ✅ Use Firestore field names that match your GET route:
-        # - "name" instead of "title"
-        # - "desc" instead of "description"
         project_ref = db.collection('projects').document()
         project_ref.set({
-            "title": data["title"].strip(),               # ← CHANGED
-            "description": data["description"].strip(),         # ← CHANGED
-            "project_timeframe": display_timeframe,      # ← STRING, not dict
+            "title": data["title"].strip(),              
+            "description": data["description"].strip(),         
+            "project_timeframe": display_timeframe,      
             "author": user["name"],
             "author_email": user['email'],
             "github": data.get("github", "").strip(),
             "committee": data["committee"].strip(),
-            "approved": False,                           # legacy field kept
-            "is_approved": False,                        # <-- ADDED minimal fix
+            "approved": False,                           
+            "is_approved": False,                        
             "required_members": data["required_members"],
             "unknown_members": [],
             "members": [],
@@ -162,7 +154,7 @@ def create_project():
         return jsonify({'msg': 'Successfully created the project'}), 201
 
     except Exception as e:
-        print(f"Create project error: {str(e)}")  # For debugging
+        print(f"Create project error: {str(e)}")  
         return jsonify({'msg': 'Internal server error', 'error': str(e)}), 500
 
 @projects_bp.route('/edit-project/<id>', methods=['PUT'])
@@ -240,11 +232,25 @@ def approve_project(id):
             db=db,
             title="Project Approved",
             message=f"Your project '{doc.to_dict().get('title','')}' has been approved with {points} points.",
-            notification_type="info",                    # ← Add a proper type
-            to_email=doc.to_dict().get('author_email',''),      # ← Correct
-            project_id=id,                               # ← Correct
-            from_email="admin@yourclub.edu"              # ← Optional: override default
-            )
+            notification_type="info",                    
+            to_email=doc.to_dict().get('author_email',''),      
+            project_id=id,                               
+            from_email="admin@yourclub.edu"              
+        )
+        author_uid = doc.to_dict().get('author_uid', None)
+        if not author_uid:
+            email = doc.to_dict().get('author_email')
+            users_ref = db.collection('Users').where('email', '==', email)
+            for u in users_ref.stream():
+                author_uid = u.id
+
+        if author_uid:
+            db.collection('contributions').add({
+                "uid": author_uid,
+                "name": doc.to_dict().get("author", ""),
+                "title" : f"Intialzed Project {doc.to_dict().get("title", "")}",
+                "timestamp": firestore.SERVER_TIMESTAMP
+            })
 
         return jsonify({'msg': 'Successfully approved the project'}), 200
     except Exception as e:
@@ -268,7 +274,6 @@ def decline_project(pid):
         if not doc.exists:
             return jsonify({'msg': 'Project not found'}), 404
         
-        # Instead of deleting, mark as declined
         project_ref.update({
             "is_declined": True,
             "decline_reason": data["reason"]
@@ -359,6 +364,22 @@ def approve_user(pid, uid):
             current_user.get('email', 'admin@email.com')
         )
 
+        track_contribution(project_data['title'])
+
+        # ----------------------------------------------------
+        # ADD CONTRIBUTION WHEN USER IS APPROVED TO JOIN
+        # ----------------------------------------------------
+        db.collection('contributions').add({
+            "uid": uid,
+            "name": user_data.get("name", ""),
+            "project_id": pid,
+            "project_title": project_data.get("title", ""),
+            "points": project_data.get("points", 0),
+            "type": "project_join",
+            "timestamp": firestore.SERVER_TIMESTAMP
+        })
+        # ----------------------------------------------------
+
         return jsonify({'msg': 'Successfully approved the user for the project'}), 200
     except Exception as e:
         return jsonify({'msg': 'Internal server error', 'error': str(e)}), 500
@@ -445,14 +466,12 @@ def approve_completion(pid):
         if not project_data.get('completion_requested', False):
             return jsonify({'msg': 'No completion request found for this project'}), 400
 
-        # Mark as completed
         project_ref.update({
             "is_completed": True,
             "completion_requested": False,
             "completion_approval_date": datetime.datetime.now()
         })
 
-        # Notify author
         send_notification(
             db,
             "Project Completion Approved",
@@ -466,7 +485,6 @@ def approve_completion(pid):
     except Exception as e:
         return jsonify({'msg': 'Internal server error', 'error': str(e)}), 500
 
-# 🟢 NEW: Admin declines project completion
 @projects_bp.route('/projects/<pid>/decline-completion', methods=['PUT'])
 def decline_completion(pid):
     try:
@@ -488,13 +506,11 @@ def decline_completion(pid):
         if not project_data.get('completion_requested', False):
             return jsonify({'msg': 'No completion request found for this project'}), 400
 
-        # Clear completion request
         project_ref.update({
             "completion_requested": False,
             "completion_decline_reason": data["reason"]
         })
 
-        # Notify author
         send_notification(
             db,
             "Project Completion Declined",
