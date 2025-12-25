@@ -1,11 +1,16 @@
-import { useMemo, useState } from "react";
-import { NavLink } from "react-router-dom";
+import { useMemo, useState, useRef, useEffect } from "react";
+import { NavLink, useNavigate } from "react-router-dom";
 import { HashLink } from "react-router-hash-link";
-import { MailIcon } from "lucide-react";
+import { MailIcon, ChevronDown, LogOut, LayoutDashboard, Settings } from "lucide-react";
 import Notification from "./Notification";
 import { useCurrentUser } from "../hooks/useCurrentUser";
 
-const NavLinkList = ({ onLinkClick, onMailClick }: any) => {
+interface NavLinkListProps {
+  onLinkClick?: () => void;
+  onMailClick?: () => void;
+}
+
+const NavLinkList = ({ onLinkClick, onMailClick }: NavLinkListProps) => {
   const linkClassName =
     "text-white/40 hover:text-white/60 focus:text-white transition-colors duration-300";
 
@@ -41,12 +46,6 @@ const NavLinkList = ({ onLinkClick, onMailClick }: any) => {
       <NavLink to="/community" className={linkClassName} onClick={handleClick}>
         Community
       </NavLink>
-      <NavLink to="/dashboard" className={linkClassName} onClick={handleClick}>
-        Dashboard
-      </NavLink>
-      <NavLink to="/admin" className={linkClassName} onClick={handleClick}>
-        Pannel
-      </NavLink>
 
       <button
         className={linkClassName}
@@ -59,7 +58,7 @@ const NavLinkList = ({ onLinkClick, onMailClick }: any) => {
   );
 };
 
-const getInitials = (name?: string) =>
+const getInitials = (name?: string): string =>
   name
     ?.split(" ")
     .filter(Boolean)
@@ -68,11 +67,61 @@ const getInitials = (name?: string) =>
     .join("") || "U";
 
 const NavBar = () => {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [openMail, setOpenMail] = useState(false);
-  const { user, isLoading } = useCurrentUser();
+  const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
+  const [openMail, setOpenMail] = useState<boolean>(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
+  const [isLoggingOut, setIsLoggingOut] = useState<boolean>(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const { user, isLoading, refresh } = useCurrentUser(); // Changed from 'refetch' to 'refresh'
+  const navigate = useNavigate();
 
   const userInitials = useMemo(() => getInitials(user?.name), [user?.name]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      const response = await fetch('http://127.0.0.1:5000/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include', // Important: includes cookies
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        // Refresh user state to clear it
+        await refresh(); // Changed from 'refetch' to 'refresh'
+        
+        // Redirect to home or login page
+        navigate('/home');
+        
+        // Show success message (optional)
+        console.log('Logged out successfully');
+      } else {
+        const data = await response.json();
+        console.error('Logout failed:', data.msg || 'Unknown error');
+        // Optionally show error toast/notification
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Optionally show error toast/notification
+    } finally {
+      setIsLoggingOut(false);
+      setIsDropdownOpen(false);
+    }
+  };
 
   return (
     <>
@@ -93,23 +142,68 @@ const NavBar = () => {
             </div>
 
             {user ? (
-              <div className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-full px-3 py-1.5">
-                <div className="h-10 w-10 rounded-full bg-[#5ea4ff] text-[#0a1a33] font-semibold flex items-center justify-center">
-                  {userInitials}
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-sm font-semibold text-white">
-                    {user.name}
-                  </span>
-                  <span className="text-xs text-white/60">
-                    {user.role || user.email}
-                  </span>
-                </div>
+              <div className="relative" ref={dropdownRef}>
+                <button
+                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                  className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-full px-3 py-1.5 hover:bg-white/10 transition-colors"
+                  disabled={isLoggingOut}
+                >
+                  <div className="h-10 w-10 rounded-full bg-[#5ea4ff] text-[#0a1a33] font-semibold flex items-center justify-center">
+                    {userInitials}
+                  </div>
+                  <div className="flex flex-col text-left">
+                    <span className="text-sm font-semibold text-white">
+                      {user.name}
+                    </span>
+                    <span className="text-xs text-white/60">
+                      {user.role || user.email}
+                    </span>
+                  </div>
+                  <ChevronDown
+                    size={20}
+                    className={`text-white/60 transition-transform duration-200 ${
+                      isDropdownOpen ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
+
+                {isDropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-56 bg-[#0a1a33] border border-white/10 rounded-lg shadow-xl overflow-hidden">
+                    <NavLink
+                      to="/dashboard"
+                      onClick={() => setIsDropdownOpen(false)}
+                      className="flex items-center gap-3 px-4 py-3 text-white/80 hover:bg-white/5 hover:text-white transition-colors"
+                    >
+                      <LayoutDashboard size={18} />
+                      <span>Dashboard</span>
+                    </NavLink>
+                    <NavLink
+                      to="/admin"
+                      onClick={() => setIsDropdownOpen(false)}
+                      className="flex items-center gap-3 px-4 py-3 text-white/80 hover:bg-white/5 hover:text-white transition-colors"
+                    >
+                      <Settings size={18} />
+                      <span>Admin Panel</span>
+                    </NavLink>
+                    <div className="border-t border-white/10"></div>
+                    <button
+                      onClick={handleLogout}
+                      disabled={isLoggingOut}
+                      className="flex items-center gap-3 px-4 py-3 text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors w-full text-left disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <LogOut size={18} className={isLoggingOut ? "animate-spin" : ""} />
+                      <span>{isLoggingOut ? 'Logging out...' : 'Logout'}</span>
+                    </button>
+                  </div>
+                )}
               </div>
             ) : isLoading ? (
               <div className="h-10 w-32 rounded-full bg-white/10 animate-pulse" />
             ) : (
-              <button className="cursor-pointer font-semibold text-primary border-2 rounded-lg px-4 py-2 border-white text-white hover:bg-white hover:text-[#0a1a33] transition">
+              <button 
+                className="cursor-pointer font-semibold text-primary border-2 rounded-lg px-4 py-2 border-white text-white hover:bg-white hover:text-[#0a1a33] transition"
+                onClick={() => navigate('/auth')}
+              >
                 Get Started
               </button>
             )}
@@ -159,23 +253,58 @@ const NavBar = () => {
                 }}
               />
               {user ? (
-                <div className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-2xl px-3 py-2 mt-4">
-                  <div className="h-10 w-10 rounded-full bg-[#5ea4ff] text-[#0a1a33] font-semibold flex items-center justify-center">
-                    {userInitials}
+                <div className="w-full px-6">
+                  <div className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-2xl px-3 py-2">
+                    <div className="h-10 w-10 rounded-full bg-[#5ea4ff] text-[#0a1a33] font-semibold flex items-center justify-center">
+                      {userInitials}
+                    </div>
+                    <div className="flex flex-col text-left flex-1">
+                      <span className="text-sm font-semibold text-white">
+                        {user.name}
+                      </span>
+                      <span className="text-xs text-white/60">
+                        {user.role || user.email}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex flex-col text-left">
-                    <span className="text-sm font-semibold text-white">
-                      {user.name}
-                    </span>
-                    <span className="text-xs text-white/60">
-                      {user.role || user.email}
-                    </span>
+                  
+                  <div className="mt-3 flex flex-col gap-2">
+                    <NavLink
+                      to="/dashboard"
+                      onClick={() => setIsMenuOpen(false)}
+                      className="flex items-center gap-3 px-4 py-3 text-white/80 bg-white/5 hover:bg-white/10 rounded-lg transition-colors"
+                    >
+                      <LayoutDashboard size={18} />
+                      <span>Dashboard</span>
+                    </NavLink>
+                    <NavLink
+                      to="/admin"
+                      onClick={() => setIsMenuOpen(false)}
+                      className="flex items-center gap-3 px-4 py-3 text-white/80 bg-white/5 hover:bg-white/10 rounded-lg transition-colors"
+                    >
+                      <Settings size={18} />
+                      <span>Admin Panel</span>
+                    </NavLink>
+                    <button
+                      onClick={() => {
+                        handleLogout();
+                        setIsMenuOpen(false);
+                      }}
+                      disabled={isLoggingOut}
+                      className="flex items-center gap-3 px-4 py-3 text-red-400 bg-red-500/10 hover:bg-red-500/20 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <LogOut size={18} className={isLoggingOut ? "animate-spin" : ""} />
+                      <span>{isLoggingOut ? 'Logging out...' : 'Logout'}</span>
+                    </button>
                   </div>
                 </div>
               ) : isLoading ? (
                 <div className="h-10 w-32 rounded-full bg-white/10 animate-pulse" />
               ) : (
-                <button className="cursor-pointer font-semibold text-primary border-2 rounded-lg px-4 py-2 border-white text-white hover:bg-white hover:text-[#0a1a33] transition">
+                <button 
+                  className="cursor-pointer font-semibold text-primary border-2 rounded-lg px-4 py-2 border-white text-white hover:bg-white hover:text-[#0a1a33] transition" 
+                  onClick={() => navigate('/auth')}
+                >
                   Get Started
                 </button>
               )}

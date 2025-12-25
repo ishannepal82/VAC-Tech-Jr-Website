@@ -2,6 +2,7 @@ from flask import Flask
 from firebase_admin import firestore, credentials, initialize_app
 from flask_cors import CORS
 import cloudinary
+from app.config import Config
 
 db = None
 '''Initialzing Firebase app'''
@@ -15,9 +16,9 @@ def create_app():
     '''Initializing Imagekit App'''
     # SDK initialization
     cloudinary.config(
-        cloud_name = "do9ertejv",
-        api_key ="959525144626746",
-        api_secret = "q8tDQ2d7hzfI6A05QLlwP8m-rKQ",
+        cloud_name = Config.CLOUDINARY_CLOUD_NAME,
+        api_key = Config.CLOUDINARY_API_KEY,
+        api_secret = Config.CLOUDINARY_API_SECRET,
         secure = True  # Always use HTTPS URLs
     )
     
@@ -63,5 +64,11 @@ def create_app():
 
     from app.routes.services.manage_community import community_bp
     app.register_blueprint(community_bp, url_prefix='/api/community')
+
+    from app.routes.services.manage_workshops import workshops_bp
+    app.register_blueprint(workshops_bp, url_prefix='/api/workshops')
+
+    from app.routes.services.manage_posts import posts_bp
+    app.register_blueprint(posts_bp, url_prefix='/api/posts')
     
     return app

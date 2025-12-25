@@ -3,8 +3,8 @@ import requests
 import datetime
 from firebase_admin import auth
 from app.routes.auth.bp import auth_bp
+from app.config import Config
 
-FIREBASE_API_KEY = "AIzaSyCSY46pA55Y6JBzlOJDkVIol66lqAM9g3w"
 
 @auth_bp.route('/login', methods=['POST'])
 def login_user():
@@ -17,7 +17,7 @@ def login_user():
             return jsonify({"msg": "Email and password are required"}), 400
         
         '''Verify User Credentials with Firebase Auth REST API'''
-        url = f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={FIREBASE_API_KEY}"
+        url = f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={Config.FIREBASE_API_KEY}"
 
         payload = {"email": email, "password": password, "returnSecureToken": True}
         r = requests.post(url, json=payload)

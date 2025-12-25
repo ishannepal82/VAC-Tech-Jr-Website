@@ -66,12 +66,13 @@ export default function ProjectDetailPage() {
         throw new Error(data.message || "Failed to join project");
       }
 
-      toast.success(" Successfully requested to join the project!");
+      toast.success("Successfully requested to join the project!");
       // Optionally refetch project to update member list
       fetchProjectById(id);
-    } catch (err: any) {
+    } catch (err) {
       console.error("Join project error:", err);
-      toast.error(` ${err.message}`);
+      const errorMessage = err instanceof Error ? err.message : "An unknown error occurred";
+      toast.error(errorMessage);
     } finally {
       setJoining(false);
     }

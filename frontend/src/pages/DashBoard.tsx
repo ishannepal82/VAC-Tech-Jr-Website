@@ -1,6 +1,6 @@
 // src/pages/DashboardPage.tsx (Updated)
 
-import React, { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import CountUp from "react-countup";
 import {
   User,
@@ -9,7 +9,6 @@ import {
   Coins,
   GitCommit,
   BookOpen,
-  CalendarCheck,
   Plus,
 } from "lucide-react";
 import CreateProjectModal from "../components/CreateProjectModal";
@@ -37,19 +36,13 @@ interface Contribution {
   description?: string;
 }
 
-interface MeetingAttendance {
-  attended: number;
-  total: number;
-}
-
 interface DashboardState {
   userInfo: UserInfo;
   contributions: Contribution[];
   workshops: Workshop[];
-  meetingAttendance: MeetingAttendance;
 }
 
-// API Response type matching your Flask endpoint
+// API Response types
 interface DashboardApiResponse {
   msg: string;
   user_info: {
@@ -65,7 +58,11 @@ interface DashboardApiResponse {
     date: string;
     description?: string;
   }>;
-  workshops?: Workshop[];
+}
+
+interface WorkshopsApiResponse {
+  msg: string;
+  workshops: Workshop[];
 }
 
 // ============ Sub-Components ============
@@ -132,7 +129,6 @@ const initialDashboardState: DashboardState = {
   },
   contributions: [],
   workshops: [],
-  meetingAttendance: { attended: 0, total: 0 },
 };
 
 // ============ Main Component ============
@@ -154,7 +150,7 @@ export default function DashboardPage() {
     "Failed to load dashboard data."
   );
 
-  // Memoized fetch function to avoid dependency issues
+  // Fetch dashboard data (user info and contributions)
   const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true);
@@ -172,7 +168,7 @@ export default function DashboardPage() {
 
       if (!response.ok) {
         if (response.status === 401) {
-          window.location.href = "/login";
+          window.location.href = "/auth";
           return;
         }
         throw new Error(`HTTP error! Status: ${response.status}`);
@@ -183,7 +179,8 @@ export default function DashboardPage() {
       // Map API response to component state with proper defaults
       const userInfoFromApi = result.user_info;
 
-      setDashboardData({
+      setDashboardData((prev) => ({
+        ...prev,
         userInfo: {
           name: userInfoFromApi?.name ?? "",
           role: userInfoFromApi?.role ?? "Member",
@@ -192,9 +189,7 @@ export default function DashboardPage() {
           memo_tokens: userInfoFromApi?.memo_tokens ?? 0,
         },
         contributions: result.contributions ?? [],
-        workshops: result.workshops ?? [],
-        meetingAttendance: initialDashboardState.meetingAttendance,
-      });
+      }));
     } catch (error) {
       console.error("Error fetching dashboard:", error);
       if (error instanceof Error) {
@@ -210,9 +205,43 @@ export default function DashboardPage() {
     }
   }, [setLoading, handleError]);
 
+  // Fetch workshops data
+  const fetchWorkshops = useCallback(async () => {
+    try {
+      const response = await fetch(
+        "http://127.0.0.1:5000/api/workshops/workshops",
+        {
+          method: "GET",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+
+      const result: WorkshopsApiResponse = await response.json();
+
+      setDashboardData((prev) => ({
+        ...prev,
+        workshops: result.workshops ?? [],
+      }));
+    } catch (error) {
+      console.error("Error fetching workshops:", error);
+      handleError(
+        error instanceof Error ? error : new Error("Failed to fetch workshops"),
+        "Unable to load workshops."
+      );
+    }
+  }, [handleError]);
+
   useEffect(() => {
     fetchDashboardData();
-  }, [fetchDashboardData]);
+    fetchWorkshops();
+  }, [fetchDashboardData, fetchWorkshops]);
 
   // Format date helper
   const formatDate = (dateString: string): string => {
@@ -227,11 +256,6 @@ export default function DashboardPage() {
     }
   };
 
-  // Generate unique ID
-  const generateId = (): string => {
-    return `workshop-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-  };
-
   // Handle workshop creation
   const handleCreateWorkshop = async (
     workshopData: Omit<Workshop, "id">
@@ -239,9 +263,8 @@ export default function DashboardPage() {
     setIsSubmitting(true);
 
     try {
-      // API call to create workshop
       const response = await fetch(
-        "http://127.0.0.1:5000/api/workshops/create",
+        "http://127.0.0.1:5000/api/workshops/add-workshop",
         {
           method: "POST",
           credentials: "include",
@@ -253,15 +276,18 @@ export default function DashboardPage() {
       );
 
       if (!response.ok) {
-        throw new Error(`Failed to create workshop: ${response.status}`);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(
+          errorData.msg || `Failed to create workshop: ${response.status}`
+        );
       }
 
       const result = await response.json();
 
-      // Add to local state
+      // Add the new workshop to local state
       const newWorkshop: Workshop = {
         ...workshopData,
-        id: result.id || generateId(),
+        id: result.id,
       };
 
       setDashboardData((prev) => ({
@@ -272,19 +298,10 @@ export default function DashboardPage() {
       setIsWorkshopModalOpen(false);
     } catch (error) {
       console.error("Error creating workshop:", error);
-
-      // For demo: Add locally even if API fails
-      const newWorkshop: Workshop = {
-        ...workshopData,
-        id: generateId(),
-      };
-
-      setDashboardData((prev) => ({
-        ...prev,
-        workshops: [newWorkshop, ...prev.workshops],
-      }));
-
-      setIsWorkshopModalOpen(false);
+      handleError(
+        error instanceof Error ? error : new Error("Failed to create workshop"),
+        "Unable to create workshop. Please try again."
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -303,9 +320,8 @@ export default function DashboardPage() {
     setIsDeleting(true);
 
     try {
-      // API call to delete workshop
       const response = await fetch(
-        `http://127.0.0.1:5000/api/workshops/${workshopToDelete.id}`,
+        `http://127.0.0.1:5000/api/workshops/delete-workshop/${workshopToDelete.id}`,
         {
           method: "DELETE",
           credentials: "include",
@@ -316,26 +332,28 @@ export default function DashboardPage() {
       );
 
       if (!response.ok) {
-        throw new Error(`Failed to delete workshop: ${response.status}`);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(
+          errorData.msg || `Failed to delete workshop: ${response.status}`
+        );
       }
 
-      // Remove from local state
+      // Remove from local state only after successful deletion
       setDashboardData((prev) => ({
         ...prev,
         workshops: prev.workshops.filter((w) => w.id !== workshopToDelete.id),
       }));
-    } catch (error) {
-      console.error("Error deleting workshop:", error);
 
-      // For demo: Remove locally even if API fails
-      setDashboardData((prev) => ({
-        ...prev,
-        workshops: prev.workshops.filter((w) => w.id !== workshopToDelete?.id),
-      }));
-    } finally {
-      setIsDeleting(false);
       setIsDeleteModalOpen(false);
       setWorkshopToDelete(null);
+    } catch (error) {
+      console.error("Error deleting workshop:", error);
+      handleError(
+        error instanceof Error ? error : new Error("Failed to delete workshop"),
+        "Unable to delete workshop. Please try again."
+      );
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -359,8 +377,7 @@ export default function DashboardPage() {
     return <PageLoader message="Loading Dashboard..." />;
   }
 
-  const { userInfo, contributions, workshops, meetingAttendance } =
-    dashboardData;
+  const { userInfo, contributions, workshops } = dashboardData;
 
   return (
     <>
@@ -376,7 +393,7 @@ export default function DashboardPage() {
                 className="absolute inset-0 w-full h-full object-cover"
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
-                  target.src = "/assets/default-avatar.png";
+                  target.src = "./src/assets/user.png";
                 }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/10 to-transparent" />
@@ -416,7 +433,7 @@ export default function DashboardPage() {
                   <div className="text-center py-8">
                     <BookOpen className="mx-auto text-gray-500 mb-3" size={40} />
                     <p className="text-gray-400 text-sm">
-                      No workshops created yet.
+                      No workshops available yet.
                     </p>
                     <button
                       type="button"
@@ -495,41 +512,22 @@ export default function DashboardPage() {
               </ul>
             </DashboardCard>
 
-            {/* Bottom Row */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Meeting Attendance */}
-              <DashboardCard
-                title="Meeting Attendance"
-                className="flex flex-col justify-center items-center"
-              >
-                <div className="flex items-center gap-4">
-                  <CalendarCheck className="text-green-400" size={40} />
-                  <div>
-                    <p className="text-3xl font-bold text-white">
-                      {meetingAttendance.attended} / {meetingAttendance.total}
-                    </p>
-                    <p className="text-sm text-gray-400">Meetings Attended</p>
-                  </div>
-                </div>
-              </DashboardCard>
-
-              {/* Start Project Button */}
-              <button
-                type="button"
-                onClick={openProjectModal}
-                className="bg-[#254b80] rounded-xl p-6 flex flex-col justify-center items-center text-center cursor-pointer hover:bg-[#1f3c66] duration-300 hover:scale-105 transition-transform"
-              >
-                <div className="w-20 h-20 bg-[#1a2f55] rounded-full flex items-center justify-center mb-4">
-                  <Plus className="text-[#b3d9ff]" size={40} />
-                </div>
-                <h4 className="font-semibold text-lg text-[#b3d9ff]">
-                  Start a Project
-                </h4>
-                <p className="text-sm text-gray-300 mt-1">
-                  Have an idea? Bring it to life.
-                </p>
-              </button>
-            </div>
+            {/* Start Project Button */}
+            <button
+              type="button"
+              onClick={openProjectModal}
+              className="bg-[#254b80] rounded-xl p-6 flex flex-col justify-center items-center text-center cursor-pointer hover:bg-[#1f3c66] duration-300 hover:scale-105 transition-transform"
+            >
+              <div className="w-20 h-20 bg-[#1a2f55] rounded-full flex items-center justify-center mb-4">
+                <Plus className="text-[#b3d9ff]" size={40} />
+              </div>
+              <h4 className="font-semibold text-lg text-[#b3d9ff]">
+                Start a Project
+              </h4>
+              <p className="text-sm text-gray-300 mt-1">
+                Have an idea? Bring it to life.
+              </p>
+            </button>
           </div>
         </div>
       </main>

@@ -8,6 +8,10 @@ news_bp = Blueprint('news', __name__)
 def get_all_news():
     """Public endpoint - Get all community news ordered by date"""
     try:
+        user = get_current_user()
+        if not user:
+            return jsonify({'msg': 'Unauthorized'}), 401
+        
         db = current_app.config['db']
         news_ref = db.collection('community_news').order_by('created_at', direction=firestore.Query.DESCENDING)
         

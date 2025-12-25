@@ -1,123 +1,191 @@
-import { useState } from "react";
-import { Plus, Edit, Trash2, Clock, CheckCircle } from "lucide-react";
-import Modal from "../components/Modal";
-
-// Mock Data
-const mockPolls = [
-  {
-    id: 1,
-    title: "Next Workshop Topic?",
-    description: "What should our next technical workshop focus on?",
-    status: "Active",
-    expiry: "2024-11-10",
-    options: [
-      { text: "Advanced Git", votes: 15 },
-      { text: "Docker & Containers", votes: 25 },
-      { text: "CI/CD Pipelines", votes: 8 },
-    ],
-  },
-  {
-    id: 2,
-    title: "Preferred Day for Meetups",
-    description: "Which day of the week works best for casual meetups?",
-    status: "Closed",
-    expiry: "2024-10-01",
-    options: [
-      { text: "Wednesday", votes: 10 },
-      { text: "Thursday", votes: 30 },
-      { text: "Friday", votes: 18 },
-    ],
-  },
-];
+import { BarChart3, Sparkles, Zap } from "lucide-react";
+import { useState, useEffect } from "react";
 
 export default function AdminPolls() {
-  const [polls] = useState(mockPolls); //TODO: need to be modified
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [isHovering, setIsHovering] = useState(false);
+  const [particles, setParticles] = useState<Array<{ id: number; x: number; y: number }>>([]);
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      const rect = document.getElementById('coming-soon-card')?.getBoundingClientRect();
+      if (rect) {
+        setMousePosition({
+          x: e.clientX - rect.left,
+          y: e.clientY - rect.top,
+        });
+      }
+    };
 
-  const getTotalVotes = (options: { votes: number }[]) =>
-    options.reduce((sum, opt) => sum + opt.votes, 0);
+    if (isHovering) {
+      window.addEventListener('mousemove', handleMouseMove);
+    }
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+    };
+  }, [isHovering]);
+
+  const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    // Create particle effect
+    const newParticles = Array.from({ length: 8 }, (_, i) => ({
+      id: Date.now() + i,
+      x,
+      y,
+    }));
+    
+    setParticles([...particles, ...newParticles]);
+    
+    // Remove particles after animation
+    setTimeout(() => {
+      setParticles((prev) => prev.filter((p) => !newParticles.includes(p)));
+    }, 1000);
+  };
 
   return (
-    <div className="bg-[#1e293b] p-6 rounded-lg shadow-lg">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-bold text-white">Poll Management</h2>
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2 bg-[#2563eb] hover:bg-[#1d4ed8] text-white px-4 py-2 rounded-lg font-semibold transition"
+    <div className="bg-[#1e293b] p-6 rounded-lg shadow-lg min-h-[600px] flex items-center justify-center">
+      <div className="max-w-2xl w-full">
+        <div
+          id="coming-soon-card"
+          className="relative bg-gradient-to-br from-[#0f172a] via-[#1a2f55] to-[#102a4e] p-12 rounded-2xl border-2 border-[#3e5a8a] overflow-hidden group cursor-pointer"
+          onMouseEnter={() => setIsHovering(true)}
+          onMouseLeave={() => setIsHovering(false)}
+          onClick={handleClick}
         >
-          <Plus size={18} /> Create Poll
-        </button>
-      </div>
+          {/* Animated gradient background */}
+          <div className="absolute inset-0 bg-gradient-to-r from-[#5ea4ff]/10 via-[#9cc9ff]/10 to-[#b3d9ff]/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          
+          {/* Mouse follow spotlight */}
+          {isHovering && (
+            <div
+              className="absolute w-64 h-64 rounded-full bg-[#5ea4ff]/20 blur-3xl pointer-events-none transition-all duration-300"
+              style={{
+                left: mousePosition.x - 128,
+                top: mousePosition.y - 128,
+              }}
+            />
+          )}
 
-      <div className="space-y-6">
-        {polls.map((poll) => (
-          <div
-            key={poll.id}
-            className="bg-[#0f172a] p-5 rounded-lg border border-gray-700"
-          >
-            <div className="flex justify-between items-start">
-              <div>
-                <h3 className="font-bold text-lg text-white">{poll.title}</h3>
-                <p className="text-sm text-gray-400 mt-1">{poll.description}</p>
-              </div>
-              <div className="flex items-center gap-4">
-                <span
-                  className={`flex items-center gap-2 text-xs font-semibold px-2 py-1 rounded-full ${
-                    poll.status === "Active"
-                      ? "bg-green-500/20 text-green-400"
-                      : "bg-gray-500/20 text-gray-400"
-                  }`}
-                >
-                  {poll.status === "Active" ? (
-                    <Clock size={14} />
-                  ) : (
-                    <CheckCircle size={14} />
-                  )}{" "}
-                  {poll.status}
-                </span>
-                <button className="text-blue-400 hover:text-blue-300">
-                  <Edit size={18} />
-                </button>
-                <button className="text-red-400 hover:text-red-300">
-                  <Trash2 size={18} />
-                </button>
-              </div>
+          {/* Click particles */}
+          {particles.map((particle, index) => (
+            <div
+              key={particle.id}
+              className="absolute w-2 h-2 bg-[#9cc9ff] rounded-full pointer-events-none animate-particle"
+              style={{
+                left: particle.x,
+                top: particle.y,
+                transform: `rotate(${index * 45}deg) translateY(-100px)`,
+                opacity: 0,
+                animation: `particle-burst 1s ease-out forwards`,
+                animationDelay: `${index * 0.05}s`,
+              }}
+            />
+          ))}
+
+          {/* Floating icons */}
+          <div className="absolute top-8 right-8 animate-float">
+            <Sparkles className="text-[#b3d9ff] opacity-60" size={32} />
+          </div>
+          <div className="absolute bottom-8 left-8 animate-float-delayed">
+            <Zap className="text-[#9cc9ff] opacity-60" size={28} />
+          </div>
+
+          {/* Content */}
+          <div className="relative z-10 flex flex-col items-center text-center">
+            {/* Animated icon */}
+            <div className="mb-6 p-6 bg-[#2563eb]/20 rounded-full border-2 border-[#5ea4ff]/50 group-hover:scale-110 group-hover:rotate-12 transition-all duration-500">
+              <BarChart3 className="text-[#9cc9ff] animate-pulse-slow" size={64} />
             </div>
-            <div className="mt-4 space-y-3">
-              {poll.options.map((option, index) => {
-                const totalVotes = getTotalVotes(poll.options);
-                const percentage =
-                  totalVotes > 0 ? (option.votes / totalVotes) * 100 : 0;
-                return (
-                  <div key={index}>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span className="text-gray-300">{option.text}</span>
-                      <span className="font-semibold text-white">
-                        {option.votes} votes
-                      </span>
-                    </div>
-                    <div className="w-full bg-gray-700 rounded-full h-2.5">
-                      <div
-                        className="bg-[#5ea4ff] h-2.5 rounded-full"
-                        style={{ width: `${percentage}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                );
-              })}
+
+            {/* Title with gradient */}
+            <h2 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-[#9cc9ff] via-[#5ea4ff] to-[#b3d9ff] bg-clip-text text-transparent animate-gradient">
+              Poll Management
+            </h2>
+
+            {/* Coming Soon Badge */}
+            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-[#2563eb] to-[#5ea4ff] px-6 py-3 rounded-full mb-6 group-hover:shadow-lg group-hover:shadow-[#5ea4ff]/50 transition-all duration-300">
+              <span className="relative flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#b3d9ff] opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-[#9cc9ff]"></span>
+              </span>
+              <span className="text-white font-bold text-lg">Coming Soon</span>
+            </div>
+
+            {/* Description */}
+            <p className="text-gray-300 text-lg max-w-md mb-8 leading-relaxed">
+              We're building an amazing polling system where you can create, manage, and analyze community polls with advanced analytics.
+            </p>
+
+            {/* Animated dots */}
+            <div className="flex gap-2 items-center mt-8">
+              <div className="w-2 h-2 bg-[#9cc9ff] rounded-full animate-bounce"></div>
+              <div className="w-2 h-2 bg-[#5ea4ff] rounded-full animate-bounce delay-100"></div>
+              <div className="w-2 h-2 bg-[#b3d9ff] rounded-full animate-bounce delay-200"></div>
             </div>
           </div>
-        ))}
+
+          {/* Decorative corners */}
+          <div className="absolute top-0 left-0 w-20 h-20 border-t-2 border-l-2 border-[#5ea4ff]/30 rounded-tl-2xl group-hover:border-[#5ea4ff]/60 transition-colors duration-300" />
+          <div className="absolute bottom-0 right-0 w-20 h-20 border-b-2 border-r-2 border-[#9cc9ff]/30 rounded-br-2xl group-hover:border-[#9cc9ff]/60 transition-colors duration-300" />
+        </div>
       </div>
 
-      <Modal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        title="Create New Poll"
-      >
-        //TODO: need to add form here
-      </Modal>
+      <style>{`
+        @keyframes float {
+          0%, 100% { transform: translateY(0px); }
+          50% { transform: translateY(-20px); }
+        }
+
+        @keyframes float-delayed {
+          0%, 100% { transform: translateY(0px); }
+          50% { transform: translateY(-15px); }
+        }
+
+        @keyframes gradient {
+          0%, 100% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+        }
+
+        @keyframes particle-burst {
+          0% {
+            opacity: 1;
+            transform: rotate(var(--rotation, 0deg)) translateY(0);
+          }
+          100% {
+            opacity: 0;
+            transform: rotate(var(--rotation, 0deg)) translateY(-100px);
+          }
+        }
+
+        .animate-float {
+          animation: float 3s ease-in-out infinite;
+        }
+
+        .animate-float-delayed {
+          animation: float-delayed 4s ease-in-out infinite;
+        }
+
+        .animate-gradient {
+          background-size: 200% 200%;
+          animation: gradient 3s ease infinite;
+        }
+
+        .animate-pulse-slow {
+          animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        .delay-100 {
+          animation-delay: 0.1s;
+        }
+
+        .delay-200 {
+          animation-delay: 0.2s;
+        }
+      `}</style>
     </div>
   );
 }

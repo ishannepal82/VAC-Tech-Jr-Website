@@ -12,7 +12,7 @@ def get_workshops():
             return jsonify({'Msg': 'Unauthorized'}), 401
 
         db = current_app.config['db']
-        workshops_ref = db.collection('workshops')
+        workshops_ref = db.collection('workshops').where('email', '==', user.get('email'))
         workshops = [doc.to_dict() for doc in workshops_ref.stream()]
 
         return jsonify({'msg': 'Successfully fetched workshops', 'workshops': workshops}), 200
@@ -29,10 +29,10 @@ def add_workshop():
             return jsonify({'msg': 'Missing JSON data'}), 400
 
         user = get_current_user()
-        if not user or not user.get('is_admin', False):
+        if not user:
             return jsonify({'msg': 'Unauthorized'}), 401
 
-        required_fields = ["title", "description", "date", "location"]
+        required_fields = ["title", "description"]
         for field in required_fields:
             if field not in data:
                 return jsonify({'msg': f'Missing field: {field}'}), 400
@@ -43,9 +43,7 @@ def add_workshop():
             'id': workshop_ref.id,
             'title': data["title"],
             'description': data["description"],
-            'date': data["date"],
-            'location': data["location"],
-            'image': data.get("image", ""),
+            'email': user.get('email', None),
             'created_at': firestore.SERVER_TIMESTAMP
         })
 
@@ -61,7 +59,7 @@ def edit_workshop(id):
             return jsonify({'msg': 'Missing JSON data'}), 400
 
         user = get_current_user()
-        if not user or not user.get('is_admin', False):
+        if not user:
             return jsonify({'msg': 'Unauthorized'}), 401
 
         db = current_app.config['db']

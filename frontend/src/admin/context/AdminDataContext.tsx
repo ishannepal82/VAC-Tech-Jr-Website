@@ -1,55 +1,19 @@
-import { createContext, useState, useContext } from "react";
-import type { ReactNode } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
+import type {
+  Role,
+  Committee,
+  Member,
+  MemberUpdatePayload,
+  UserApiResponse,
+} from "../admin.types";
 
-type Role = "Member" | "Head";
-type Committee = "None" | "PR" | "ECA" | "Coding" | "Graphics" | "Bod";
-
-interface Member {
-  id?: string;
-  name: string;
-  email: string;
-  points: number;
-  role: Role;
-  committee: Committee;
-  memo_tokens: number;
-  is_admin: boolean;
-}
-
-// Using Partial<Member> allows sending only changed fields.
-type MemberUpdatePayload = Partial<Omit<Member, "id" | "points">> & {
-  password?: string;
-  is_admin?: boolean;
-  memo_tokens?: number;
-  points?: number;
-};
-
-interface AdminDataContextType {
-  members: Member[];
-  addMember: (
-    name: string,
-    email: string,
-    password: string,
-    role: Role,
-    committee: Committee,
-    is_admin: boolean,
-    memo_tokens: number
-  ) => Promise<void>;
-  getMembers: () => Promise<void>;
-  deleteMember: (id: string) => Promise<void>;
-  updateMember: (id: string, updatedData: MemberUpdatePayload) => Promise<void>;
-}
-
-const AdminDataContext = createContext<AdminDataContextType | undefined>(
-  undefined
-);
-
-export const AdminDataProvider = ({ children }: { children: ReactNode }) => {
+export function useAdminData() {
   const [members, setMembers] = useState<Member[]>([]);
 
   // ✅ Common error handler for fetch calls
   const handleResponseError = async (res: Response, fallbackMsg: string) => {
-    let errorData: any = {};
+    let errorData: { msg?: string; message?: string } = {};
     try {
       errorData = await res.json();
     } catch {
@@ -117,8 +81,8 @@ export const AdminDataProvider = ({ children }: { children: ReactNode }) => {
         await handleResponseError(res, "Failed to fetch users");
       }
 
-      const data = await res.json();
-      const fetchedMembers: Member[] = data.users.map((u: any) => ({
+      const data: { users: UserApiResponse[] } = await res.json();
+      const fetchedMembers: Member[] = data.users.map((u) => ({
         id: u.id,
         name: u.name,
         email: u.email,
@@ -187,7 +151,7 @@ export const AdminDataProvider = ({ children }: { children: ReactNode }) => {
           member.id === id ? { ...member, ...updatedData } : member
         )
       );
-    } catch (e: any) {
+    } catch (e) {
       console.error("❌ Error updating member:", e);
       toast.error(
         e instanceof Error ? e.message : "Failed to update member",
@@ -197,25 +161,11 @@ export const AdminDataProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // ✅ Provide all context values
-  const value: AdminDataContextType = {
+  return {
     members,
     addMember,
     getMembers,
     deleteMember,
     updateMember,
   };
-
-  return (
-    <AdminDataContext.Provider value={value}>
-      {children}
-    </AdminDataContext.Provider>
-  );
-};
-
-export const useAdminData = () => {
-  const context = useContext(AdminDataContext);
-  if (!context)
-    throw new Error("useAdminData must be used within an AdminDataProvider");
-  return context;
-};
+}

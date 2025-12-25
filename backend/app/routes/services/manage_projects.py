@@ -20,6 +20,9 @@ def get_all_projects():
 @projects_bp.route('/get-approved-projects', methods=['GET'])
 def get_approved_projects():
     try:
+        user = get_current_user()
+        if not user:
+            return jsonify({'msg': 'Unauthorized'}), 401
         db = current_app.config['db']
         projects_ref = db.collection('projects')
         approved_projects_ref = projects_ref.where('is_approved', '==', True)
@@ -363,12 +366,7 @@ def approve_user(pid, uid):
             pid,
             current_user.get('email', 'admin@email.com')
         )
-
-        track_contribution(project_data['title'])
-
-        # ----------------------------------------------------
-        # ADD CONTRIBUTION WHEN USER IS APPROVED TO JOIN
-        # ----------------------------------------------------
+        # Log contribution
         db.collection('contributions').add({
             "uid": uid,
             "name": user_data.get("name", ""),

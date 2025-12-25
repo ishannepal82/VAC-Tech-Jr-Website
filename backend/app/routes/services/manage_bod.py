@@ -5,14 +5,11 @@ import cloudinary.uploader
 
 bod_bp = Blueprint('bod', __name__)
 
-# ✅ 1. Get all BOD members
 @bod_bp.route('/bod', methods=["GET"])
 def get_bod():
     try:
         db = current_app.config['db']
         user = get_current_user()
-        if not user:
-            return jsonify({'msg': 'Unauthorized'}), 401
 
         bod_ref = db.collection('bod').where('comittee', '==', 'BOD')
         bod = [doc.to_dict() | {"id": doc.id} for doc in bod_ref.stream()]
@@ -23,7 +20,6 @@ def get_bod():
         return jsonify({'msg': 'Internal Server Error', 'error': str(e)}), 500
 
 
-# ✅ 2. Add new BOD member (only: name, role, comittee, image)
 @bod_bp.route('/add-bod', methods=["POST"])
 def add_bod():
     try:
@@ -46,7 +42,6 @@ def add_bod():
             upload_result = cloudinary.uploader.upload(image_file)
             image_url = upload_result.get('secure_url', '')
 
-        # Store in Firestore (NO AUTH USER CREATED)
         new_doc = db.collection('bod').document()
         new_doc.set({
             'name': name,
@@ -70,6 +65,7 @@ def edit_bod(uid):
 
         name = request.form.get('name')
         role = request.form.get('role')
+        comittee = request.form.get('comittee')
         image_file = request.files.get('image')
 
         user = get_current_user()
@@ -86,6 +82,8 @@ def edit_bod(uid):
             update_data['name'] = name
         if role:
             update_data['role'] = role
+        if comittee:
+            update_data['comittee'] = comittee
 
         # Upload new image if provided
         if image_file:
