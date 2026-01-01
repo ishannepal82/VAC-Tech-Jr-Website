@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useState } from "react";
-import { Newspaper } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { Newspaper, Calendar, AlertCircle } from "lucide-react";
 import PageLoader from "../common/PageLoader";
 import { usePageStatus } from "../../hooks/usePageStatus";
 
@@ -40,61 +40,65 @@ export default function NewsAndEvents() {
   );
 
   const fetchData = useCallback(async () => {
-      try {
-        setLoading(true);
-        // Fetch news
-        const newsResponse = await fetch("http://127.0.0.1:5000/api/news/news", {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
+    try {
+      setLoading(true);
+      // Fetch news
+      const newsResponse = await fetch("http://127.0.0.1:5000/api/news/news", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+      });
 
-        if (!newsResponse.ok) {
-          throw new Error("Failed to fetch news");
-        }
+      if (!newsResponse.ok) {
+        throw new Error("Failed to fetch news");
+      }
 
-        const newsData: NewsApiResponse = await newsResponse.json();
-        
-        // Sort news by created_at date and set all news items
-        const sortedNews = newsData.news.sort((a, b) => 
-          b.created_at._seconds - a.created_at._seconds
-        );
-        setNews(sortedNews);
+      const newsData: NewsApiResponse = await newsResponse.json();
 
-        // Fetch community events
-        const eventsResponse = await fetch("http://127.0.0.1:5000/api/community/events", {
+      // Sort news by created_at date and set all news items
+      const sortedNews = newsData.news.sort(
+        (a, b) => b.created_at._seconds - a.created_at._seconds
+      );
+      setNews(sortedNews);
+
+      // Fetch community events
+      const eventsResponse = await fetch(
+        "http://127.0.0.1:5000/api/community/events",
+        {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
           },
           credentials: "include",
-        });
-
-        if (eventsResponse.ok) {
-          const eventsData: CommunityEventApiResponse = await eventsResponse.json();
-          
-          // Sort events by created_at date and get the most recent one
-          if (eventsData.events && eventsData.events.length > 0) {
-            const sortedEvents = eventsData.events.sort((a, b) => 
-              b.created_at._seconds - a.created_at._seconds
-            );
-            setRecentEvent(sortedEvents[0]);
-          }
-        } else if (eventsResponse.status === 404) {
-          setRecentEvent(null);
-        } else {
-          throw new Error("Failed to fetch community events");
         }
+      );
 
-      } catch (err) {
-        console.error("Error fetching data:", err);
-        setNews([]);
+      if (eventsResponse.ok) {
+        const eventsData: CommunityEventApiResponse =
+          await eventsResponse.json();
+
+        // Sort events by created_at date and get the most recent one
+        if (eventsData.events && eventsData.events.length > 0) {
+          const sortedEvents = eventsData.events.sort(
+            (a, b) => b.created_at._seconds - a.created_at._seconds
+          );
+          setRecentEvent(sortedEvents[0]);
+        }
+      } else if (eventsResponse.status === 404) {
         setRecentEvent(null);
-        handleError(err, "Unable to load news and events.");
-      } finally {
-        setLoading(false);
+      } else {
+        throw new Error("Failed to fetch community events");
       }
+    } catch (err) {
+      console.error("Error fetching data:", err);
+      setNews([]);
+      setRecentEvent(null);
+      handleError(err, "Unable to load news and events.");
+    } finally {
+      setLoading(false);
+    }
   }, [handleError, setLoading]);
 
   useEffect(() => {
@@ -119,11 +123,15 @@ export default function NewsAndEvents() {
       </div>
       <div className="max-w-7xl w-full p-2 mx-auto">
         <div className="mt-10 grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {recentEvent && (
+          {/* Recent Event Section */}
+          {recentEvent ? (
             <div className="lg:col-span-2 group rounded-2xl overflow-hidden shadow-2xl shadow-[#051122] transform hover:-translate-y-2 transition-all duration-300">
               <div className="relative">
                 <img
-                  src={recentEvent.image_url || "https://images.unsplash.com/photo-1523580494863-6f3031224c94?q=80&w=2070&auto=format&fit=crop"}
+                  src={
+                    recentEvent.image_url ||
+                    "https://images.unsplash.com/photo-1523580494863-6f3031224c94?q=80&w=2070&auto=format&fit=crop"
+                  }
                   alt={recentEvent.title}
                   className="w-full h-108 object-cover"
                 />
@@ -139,32 +147,60 @@ export default function NewsAndEvents() {
                 </div>
               </div>
             </div>
+          ) : (
+            <div className="lg:col-span-2 bg-[#1a2f55] rounded-2xl overflow-hidden shadow-2xl shadow-[#051122] flex flex-col items-center justify-center p-12 text-center min-h-[400px]">
+              <div className="bg-[#2563eb]/20 p-6 rounded-full mb-4">
+                <Calendar className="text-[#9cc9ff]" size={64} />
+              </div>
+              <h3 className="text-2xl font-bold text-white mb-2">
+                No Recent Events
+              </h3>
+              <p className="text-gray-400 max-w-md">
+                Stay tuned! We'll be posting exciting community events soon.
+              </p>
+            </div>
           )}
+
+          {/* More News Section */}
           <div>
             <h1 className="text-2xl mb-5 font-bold text-[#9cc9ff]">
               More News
             </h1>
             <div className="h-95 overflow-scroll noScroll overflow-x-hidden">
-              <div className="flex flex-col gap-2 overflow-y-scroll noScroll scroll-smooth">
-                {news.map((newsItem) => (
-                  <div
-                    key={newsItem.id}
-                    className="bg-[#1a2f55] p-6 rounded-2xl flex items-start gap-4 hover:bg-[#254272] hover:scale-101 transform transition-all duration-300"
-                  >
-                    <div className="bg-[#2563eb] p-3 rounded-lg">
-                      <Newspaper className="text-white" size={24} />
+              {news.length > 0 ? (
+                <div className="flex flex-col gap-2 overflow-y-scroll noScroll scroll-smooth">
+                  {news.map((newsItem) => (
+                    <div
+                      key={newsItem.id}
+                      className="bg-[#1a2f55] p-6 rounded-2xl flex items-start gap-4 hover:bg-[#254272] hover:scale-101 transform transition-all duration-300"
+                    >
+                      <div className="bg-[#2563eb] p-3 rounded-lg">
+                        <Newspaper className="text-white" size={24} />
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-lg text-white">
+                          {newsItem.title}
+                        </h4>
+                        <p className="text-gray-400 text-sm mt-1">
+                          {newsItem.description}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <h4 className="font-semibold text-lg text-white">
-                        {newsItem.title}
-                      </h4>
-                      <p className="text-gray-400 text-sm mt-1">
-                        {newsItem.description}
-                      </p>
-                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="bg-[#1a2f55] rounded-2xl p-8 text-center flex flex-col items-center justify-center min-h-[300px]">
+                  <div className="bg-[#2563eb]/20 p-4 rounded-full mb-4">
+                    <AlertCircle className="text-[#9cc9ff]" size={48} />
                   </div>
-                ))}
-              </div>
+                  <h4 className="text-xl font-bold text-white mb-2">
+                    No News Available
+                  </h4>
+                  <p className="text-gray-400 text-sm">
+                    Check back later for the latest updates and announcements from our community.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>

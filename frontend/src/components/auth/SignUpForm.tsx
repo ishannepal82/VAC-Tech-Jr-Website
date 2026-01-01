@@ -3,7 +3,12 @@ import { useState } from "react";
 import type { FormEvent } from "react";
 import { toast } from "sonner";
 
-export default function SignUpForm() {
+type SignUpFormProps = {
+  onSubmit?: (formData: Record<string, string>) => Promise<void>;
+  loading?: boolean;
+};
+
+export default function SignUpForm(_props: SignUpFormProps) {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

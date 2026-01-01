@@ -1,6 +1,5 @@
 from flask import request, jsonify, make_response, current_app
 from firebase_admin import auth
-
 from app.routes.auth.bp import auth_bp
 
 

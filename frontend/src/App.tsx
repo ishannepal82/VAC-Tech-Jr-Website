@@ -12,7 +12,6 @@ import DashBoard from "./pages/DashBoard";
 import EventsPage from "./pages/EventsPage";
 import Footer from "./components/Footer";
 import AuthPage from "./pages/AuthPage";
-import { AdminDataProvider } from "./admin/context/AdminDataContext";
 import AdminPanelLayout from "./admin/components/AdminLayout";
 import AdminDashboard from "./admin/pages/AdminDashboard";
 import AdminMembers from "./admin/pages/AdminMembers";
@@ -22,7 +21,6 @@ import AdminProjects from "./admin/pages/AdminProjects";
 import AdminCommunity from "./admin/pages/AdminCommunity";
 import AdminPolls from "./admin/pages/AdminPolls";
 import AdminSettings from "./admin/pages/AdminSettings";
-// import Notification from "./components/Notification";
 import PreLoginLanding from "./pages/Landing";
 import Intruder from "./pages/intruder";
 import ErrorFallback from "./pages/ErrorFallback";
@@ -62,7 +60,7 @@ function App() {
         <Route
           path="/admin/*"
           element={
-            <AdminDataProvider>
+            <>
               <NavBar />
               <Routes>
                 <Route path="/" element={<AdminPanelLayout />}>
@@ -76,7 +74,7 @@ function App() {
                   <Route path="settings" element={<AdminSettings />} />
                 </Route>
               </Routes>
-            </AdminDataProvider>
+            </>
           }
         />
       </Routes>

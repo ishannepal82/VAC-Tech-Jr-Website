@@ -44,6 +44,10 @@ def upload_image_to_storage(file, folder='community_events'):
 @community_bp.route('/events', methods=["GET"])
 def get_community_events():
     try:
+        user = get_current_user()
+        if not user:
+            return jsonify({'msg': 'Unauthorized'}), 401
+        
         db = current_app.config['db']
         community_ref = db.collection('community_events').order_by('created_at', direction=firestore.Query.DESCENDING)
         events = []

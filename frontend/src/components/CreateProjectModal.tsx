@@ -6,6 +6,7 @@ import { toast } from "sonner";
 interface CreateProjectModalProps {
   isOpen: boolean;
   onClose: () => void;
+  userName: string; 
 }
 
 const CreateProjectModal: React.FC<CreateProjectModalProps> = ({

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { Search, Edit, Trash2, Plus, Filter } from "lucide-react";
 import MemberRankBadge from "../components/MemberRankBadge";
 import Modal from "../components/Modal";
@@ -30,7 +30,6 @@ const getRank = (points: number): Rank => {
 };
 
 export default function AdminMembers() {
-  // Add updateMember to the destructuring assignment
   const { members, addMember, getMembers, deleteMember, updateMember } =
     useAdminData();
   const { isLoading, setLoading, handleError } = usePageStatus(
@@ -49,11 +48,35 @@ export default function AdminMembers() {
   const [committee, setCommittee] = useState<Committee>("None");
   const [memo_tokens, setMemoTokens] = useState<number>(0);
   const [points, setPoints] = useState<number>(0);
-  // Near your other state declarations
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [memberToDelete, setMemberToDelete] = useState<string | null>(null);
 
-  const loadMembers = useCallback(async () => {
+  // FIX: Use a ref to track if initial fetch has been done
+  const hasFetched = useRef(false);
+
+  // FIX: Remove dependencies that cause infinite loop
+  useEffect(() => {
+    // Only fetch once on mount
+    if (hasFetched.current) return;
+    hasFetched.current = true;
+
+    const loadMembers = async () => {
+      try {
+        setLoading(true);
+        await getMembers();
+      } catch (error) {
+        console.error("Error loading members:", error);
+        handleError(error, "Unable to fetch members.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadMembers();
+  }, []); // Empty dependency array - only run on mount
+
+  // Separate function for refreshing data (used after mutations)
+  const refreshMembers = useCallback(async () => {
     try {
       setLoading(true);
       await getMembers();
@@ -64,10 +87,6 @@ export default function AdminMembers() {
       setLoading(false);
     }
   }, [getMembers, handleError, setLoading]);
-
-  useEffect(() => {
-    loadMembers();
-  }, [loadMembers]);
 
   const handleOpenModal = (member: Member | null = null) => {
     setEditingMember(member);
@@ -88,6 +107,7 @@ export default function AdminMembers() {
       setMemoTokens(0);
       setRole("Member");
       setIsAdmin(false);
+      setPoints(0);
     }
   };
 
@@ -101,6 +121,7 @@ export default function AdminMembers() {
     setMemoTokens(0);
     setRole("Member");
     setIsAdmin(false);
+    setPoints(0);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -129,30 +150,27 @@ export default function AdminMembers() {
         );
       }
 
-      await loadMembers(); // refresh list after action
+      await refreshMembers(); // Use refreshMembers instead of loadMembers
       handleCloseModal();
     } catch (error) {
       console.error("Failed to submit member form:", error);
     }
   };
 
-  // This function opens the confirmation modal
   const handleDeleteClick = (id: string) => {
     setMemberToDelete(id);
     setIsDeleteModalOpen(true);
   };
 
-  // This function runs when the user confirms the deletion
   const confirmDelete = async () => {
     if (memberToDelete) {
       try {
         await deleteMember(memberToDelete);
-        await loadMembers();
+        await refreshMembers(); // Use refreshMembers instead of loadMembers
       } catch (error) {
         console.error("Failed to delete member:", error);
       }
     }
-    // Close the modal and reset the state
     setIsDeleteModalOpen(false);
     setMemberToDelete(null);
   };
@@ -161,6 +179,7 @@ export default function AdminMembers() {
     setIsDeleteModalOpen(false);
     setMemberToDelete(null);
   };
+
   const filteredMembers = useMemo(() => {
     return members
       .filter((member) => {
@@ -185,6 +204,7 @@ export default function AdminMembers() {
 
   return (
     <div className="bg-[#1e293b] p-6 rounded-lg shadow-lg">
+      {/* Rest of your JSX remains the same */}
       {/* Top controls */}
       <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
         <div className="relative w-full md:w-1/3">
@@ -246,6 +266,7 @@ export default function AdminMembers() {
           </button>
         </div>
       </div>
+
       {/* Members table */}
       <div className="overflow-x-auto">
         <table className="w-full text-sm text-left text-gray-300">
@@ -276,7 +297,6 @@ export default function AdminMembers() {
                 </td>
                 <td className="px-6 py-4">{member.role}</td>
                 <td className="px-6 py-4">{member.committee}</td>
-
                 <td className="px-6 py-4 flex gap-4">
                   <button
                     className="text-blue-400 hover:text-blue-300"
@@ -296,7 +316,8 @@ export default function AdminMembers() {
           </tbody>
         </table>
       </div>
-      {/* Modal */}
+
+      {/* Add/Edit Modal */}
       <Modal
         isOpen={isModalOpen}
         onClose={handleCloseModal}
@@ -400,6 +421,7 @@ export default function AdminMembers() {
         </form>
       </Modal>
 
+      {/* Delete Confirmation Modal */}
       <Modal
         isOpen={isDeleteModalOpen}
         onClose={cancelDelete}

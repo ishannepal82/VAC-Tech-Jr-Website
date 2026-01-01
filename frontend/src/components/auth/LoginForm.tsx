@@ -3,7 +3,12 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
-export default function LoginForm() {
+type LoginFormProps = {
+  onSubmit?: (formData: Record<string, string>) => Promise<void>;
+  loading?: boolean;
+};
+
+export default function LoginForm(_props: LoginFormProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();

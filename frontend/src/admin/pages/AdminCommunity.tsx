@@ -139,6 +139,7 @@ export default function AdminCommunity() {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
             "Content-Type": "application/json",
           },
+          credentials: "include",
         }),
         fetch("http://127.0.0.1:5000/api/community/events", {
           method: "GET",
