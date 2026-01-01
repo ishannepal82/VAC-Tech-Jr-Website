@@ -22,7 +22,7 @@ def register_user():
         )
         uid = user.uid
 
-        auth.set_custom_user_claims(uid, {'role': 'President', 'is_admin': True})
+        auth.set_custom_user_claims(uid, {'role': 'member', 'is_admin': False})
         db = current_app.config['db']
         user_ref = db.collection('Users').document(uid)
 
@@ -32,12 +32,12 @@ def register_user():
         user_ref.set({
             'email': email,
             'name': username,
-            'role': 'President',
+            'role': 'member',
             'rank': 'Hacker',
             'points': 0,
-            "is_admin": True,
-            'committee': 'HOD',
-            'memo_tokens': 0
+            "is_admin": False,
+            'committee': 'Coding Club',
+            'memo_tokens': 4
         })
 
         return jsonify({'msg': 'User registered sucessfully'}), 201
