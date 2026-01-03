@@ -42,41 +42,41 @@ export default function EventsPage() {
 
   // Fetch events from backend
   const fetchEvents = useCallback(async () => {
-      try {
-        setLoading(true);
-        const res = await fetch("http://127.0.0.1:5000/api/events/events", {
-          method: "GET",
-          credentials: "include",
-        });
+    try {
+      setLoading(true);
+      const res = await fetch("http://127.0.0.1:5000/api/events/events", {
+        method: "GET",
+        credentials: "include",
+      });
 
-        if (!res.ok) throw new Error("Failed to fetch events");
+      if (!res.ok) throw new Error("Failed to fetch events");
 
-        const data = await res.json();
+      const data = await res.json();
 
-        // Make sure data.events exists and is an array
-        if (!Array.isArray(data.events)) throw new Error("Invalid data format");
+      // Make sure data.events exists and is an array
+      if (!Array.isArray(data.events)) throw new Error("Invalid data format");
 
-        const parsedEvents: Event[] = data.events.map((ev: any) => ({
-          id: ev.id,
-          title: ev.name, // map backend `name` to title
-          description: ev.description,
-          date: new Date(ev.date), // convert string to Date
-          time: ev.time,
-          location: ev.venue, // map backend `venue` to location
-          category: "other", // optional default category
-          status: ev.status
-            ? ev.status.charAt(0).toUpperCase() + ev.status.slice(1) // "upcoming" -> "Upcoming"
-            : "Upcoming",
-        }));
+      const parsedEvents: Event[] = data.events.map((ev: any) => ({
+        id: ev.id,
+        title: ev.name, // map backend `name` to title
+        description: ev.description,
+        date: new Date(ev.date), // convert string to Date
+        time: ev.time,
+        location: ev.venue, // map backend `venue` to location
+        category: "other", // optional default category
+        status: ev.status
+          ? ev.status.charAt(0).toUpperCase() + ev.status.slice(1) // "upcoming" -> "Upcoming"
+          : "Upcoming",
+      }));
 
-        setEvents(parsedEvents);
-      } catch (error) {
-        console.error("Error fetching events:", error);
-        setEvents([]); // fallback
-        handleError(error, "Unable to fetch events.");
-      } finally {
-        setLoading(false);
-      }
+      setEvents(parsedEvents);
+    } catch (error) {
+      console.error("Error fetching events:", error);
+      setEvents([]); // fallback
+      handleError(error, "Unable to fetch events.");
+    } finally {
+      setLoading(false);
+    }
   }, [handleError, setLoading]);
 
   useEffect(() => {
@@ -103,6 +103,9 @@ export default function EventsPage() {
   if (isLoading) {
     return <PageLoader message="Loading events..." />;
   }
+  // ----------------ref container------------------
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  // -----------------------------------------------
 
   return (
     <section className="min-h-screen w-full bg-[#0a1a33] text-white font-poppins py-12 px-4 sm:px-6 lg:px-8">
@@ -162,14 +165,14 @@ export default function EventsPage() {
                 </div>
               ) : (
                 upcomingEvents.map((event) => (
+
                   <div
                     key={event.id}
-                    ref={(el) => (eventRefs.current[event.id] = el)}
-                    className={`bg-[#112240] p-5 rounded-xl border-2 transition-all duration-300 shadow-lg ${
-                      isSameDay(event.date, selectedDate)
-                        ? "border-[#5ea4ff]"
-                        : "border-[#1a2f55] hover:border-[#3a507e]"
-                    }`}
+                    ref={containerRef}
+                    className={`bg-[#112240] p-5 rounded-xl border-2 transition-all duration-300 shadow-lg ${isSameDay(event.date, selectedDate)
+                      ? "border-[#5ea4ff]"
+                      : "border-[#1a2f55] hover:border-[#3a507e]"
+                      }`}
                   >
                     <p className="text-sm font-semibold text-[#5ea4ff] mb-1">
                       {event.date.toLocaleDateString("en-US", {
