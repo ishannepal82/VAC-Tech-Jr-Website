@@ -9,6 +9,7 @@ export interface Project {
   description: string;
   github: string;
   is_approved: boolean;
+  is_declined: boolean;
   is_completed?: boolean;
   members: { name: string; avatarUrl?: string }[];
   points: number;
@@ -16,6 +17,7 @@ export interface Project {
   required_members: number;
   unknown_members: any[];
   technologies?: string[];
+  rejection_reason?: string;
 }
 
 // export const allProjects: Project[] = [
