@@ -102,7 +102,7 @@ export default function ProjectDetailPage() {
     <div className="min-h-screen w-full bg-[#0a1a33] text-white font-poppins py-12 sm:py-20 px-4">
       <div className="max-w-4xl mx-auto">
         <Link
-          to="/projects"
+          to="/ProjectsSection"
           className="inline-flex items-center gap-2 text-[#9cc9ff] hover:text-white mb-8 transition-colors"
         >
           <ChevronLeft size={20} />
@@ -206,11 +206,10 @@ export default function ProjectDetailPage() {
                   <button
                     onClick={joinProject}
                     disabled={joining}
-                    className={`${
-                      joining
+                    className={`${joining
                         ? "bg-gray-500 cursor-not-allowed"
                         : "bg-[#2563eb] hover:bg-[#1d4ed8]"
-                    } text-white px-8 py-3 rounded-full font-semibold text-lg transition w-full sm:w-auto`}
+                      } text-white px-8 py-3 rounded-full font-semibold text-lg transition w-full sm:w-auto`}
                   >
                     {joining ? "Joining..." : "Join Project"}
                   </button>
