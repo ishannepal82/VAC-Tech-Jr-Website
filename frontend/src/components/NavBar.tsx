@@ -46,15 +46,6 @@ const NavLinkList = ({ onLinkClick, onMailClick }: NavLinkListProps) => {
       <NavLink to="/community" className={linkClassName} onClick={handleClick}>
         Community
       </NavLink>
-<<<<<<< HEAD
-      <NavLink to="/dashboard" className={linkClassName} onClick={handleClick}>
-        Dashboard
-      </NavLink>
-      <NavLink to="/admin" className={linkClassName} onClick={handleClick}>
-        Panel
-      </NavLink>
-=======
->>>>>>> c13fbccf4f3d28853b13699a5cda93435f4e8212
 
       <button
         className={linkClassName}
