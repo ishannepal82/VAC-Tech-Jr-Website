@@ -32,7 +32,7 @@ export default function AdminDashboard() {
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
-  
+
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
   const [isPollModalOpen, setIsPollModalOpen] = useState(false);
 
@@ -60,9 +60,7 @@ export default function AdminDashboard() {
         setDashboardData(data);
         setIsAdmin(data.is_admin);
 
-        if (!data.is_admin) {
-          toast.error("Access denied. Admin privileges required.");
-        }
+
       } catch (error) {
         console.error("Dashboard fetch error:", error);
         const errorMessage = error instanceof Error ? error.message : "Failed to load dashboard";
