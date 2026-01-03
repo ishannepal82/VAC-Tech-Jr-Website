@@ -146,9 +146,9 @@ export default function AdminProjects() {
 
     const isApproving = !selectedProject.is_approved;
     let success = false;
-    
+
     // Include the updated members array in the payload
-    let payload = { 
+    let payload = {
       ...editFormData,
       members: editFormData.members // This will update the backend members list
     };
@@ -250,7 +250,7 @@ export default function AdminProjects() {
       github: project.github || "",
       required_members: project.required_members || 1,
       committee: project.committee || "",
-      members: project.members || [], 
+      members: project.members?.map(m => typeof m === 'string' ? m : m.name) || [],
     });
     setApprovalModalOpen(true);
   };
@@ -285,208 +285,208 @@ export default function AdminProjects() {
           "Declined Projects",
         ]}
       >
-          {/* Tab 1: Approval Requests (Pending) */}
-          <div className="space-y-4">
-            {approvalRequests.length > 0 ? (
-              approvalRequests.map((req) => (
-                <div
-                  key={req.id}
-                  className="bg-[#0f172a] p-4 rounded-lg border border-gray-700 flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
-                >
-                  <div>
-                    <h3 className="font-bold">{req.title}</h3>
-                    <p className="text-sm text-gray-400">
-                      Submitted by{" "}
-                      <span className="font-semibold text-gray-300">
-                        {req.author}
-                      </span>
+        {/* Tab 1: Approval Requests (Pending) */}
+        <div className="space-y-4">
+          {approvalRequests.length > 0 ? (
+            approvalRequests.map((req) => (
+              <div
+                key={req.id}
+                className="bg-[#0f172a] p-4 rounded-lg border border-gray-700 flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
+              >
+                <div>
+                  <h3 className="font-bold">{req.title}</h3>
+                  <p className="text-sm text-gray-400">
+                    Submitted by{" "}
+                    <span className="font-semibold text-gray-300">
+                      {req.author}
+                    </span>
+                  </p>
+                  <p className="text-sm text-gray-300 mt-2">
+                    {req.description}
+                  </p>
+                  {req.committee && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      Committee: <span className="capitalize">{req.committee}</span>
                     </p>
-                    <p className="text-sm text-gray-300 mt-2">
-                      {req.description}
-                    </p>
-                    {req.committee && (
-                      <p className="text-xs text-gray-500 mt-1">
-                        Committee: <span className="capitalize">{req.committee}</span>
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex gap-2 flex-shrink-0">
-                    <button
-                      onClick={() => openApprovalModal(req)}
-                      className="bg-green-600 hover:bg-green-700 p-2 rounded-lg transition"
-                      title="Approve & Edit"
-                    >
-                      <Check size={18} />
-                    </button>
-                    <button
-                      onClick={() => openRejectModal(req)}
-                      className="bg-red-600 hover:bg-red-700 p-2 rounded-lg transition"
-                      title="Decline"
-                    >
-                      <X size={18} />
-                    </button>
-                  </div>
+                  )}
                 </div>
-              ))
-            ) : (
-              <p className="text-gray-500 text-center py-10">
-                No pending project requests.
-              </p>
-            )}
-          </div>
-
-          {/* Tab 2: Approved Projects */}
-          <div className="space-y-4">
-            {approvedProjects.length > 0 ? (
-              approvedProjects.map((proj) => (
-                <div
-                  key={proj.id}
-                  className="bg-[#0f172a] p-4 rounded-lg border border-gray-700 flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
-                >
-                  <div>
-                    <h3 className="font-bold">{proj.title}</h3>
-                    <p className="text-sm text-gray-400">
-                      Author:{" "}
-                      <span className="font-semibold text-gray-300">
-                        {proj.author}
-                      </span>{" "}
-                      | Points:{" "}
-                      <span className="font-bold text-yellow-400">
-                        {proj.points}
-                      </span>
-                    </p>
-                    {proj.committee && (
-                      <p className="text-xs text-gray-500 mt-1">
-                        Committee: <span className="capitalize">{proj.committee}</span>
-                      </p>
-                    )}
-                    {proj.members && proj.members.length > 0 && (
-                      <p className="text-xs text-blue-400 mt-1">
-                        Team ({proj.members.length}): {proj.members.join(", ")}
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex gap-3 flex-shrink-0 items-center">
-                    <button
-                      className="text-blue-400 hover:text-blue-300"
-                      title="Edit Project"
-                      onClick={() => openApprovalModal(proj)}
-                    >
-                      <Edit size={18} />
-                    </button>
-                    <button
-                      className="text-red-400 hover:text-red-300"
-                      title="Delete Project"
-                      onClick={() => handleDelete(proj.id, proj.title)}
-                    >
-                      <Trash2 size={18} />
-                    </button>
-                    <button
-                      onClick={() => handleMarkCompleted(proj.id, proj.title)}
-                      className="flex items-center gap-1 text-sm bg-gray-600 hover:bg-gray-700 px-3 py-1 rounded-lg transition"
-                    >
-                      <Archive size={14} /> Mark Completed
-                    </button>
-                  </div>
+                <div className="flex gap-2 flex-shrink-0">
+                  <button
+                    onClick={() => openApprovalModal(req)}
+                    className="bg-green-600 hover:bg-green-700 p-2 rounded-lg transition"
+                    title="Approve & Edit"
+                  >
+                    <Check size={18} />
+                  </button>
+                  <button
+                    onClick={() => openRejectModal(req)}
+                    className="bg-red-600 hover:bg-red-700 p-2 rounded-lg transition"
+                    title="Decline"
+                  >
+                    <X size={18} />
+                  </button>
                 </div>
-              ))
-            ) : (
-              <p className="text-gray-500 text-center py-10">
-                No approved projects.
-              </p>
-            )}
-          </div>
-
-          {/* Tab 3: Completed Projects */}
-          <div className="space-y-4">
-            {completedProjects.length > 0 ? (
-              completedProjects.map((proj) => (
-                <div
-                  key={proj.id}
-                  className="bg-[#0f172a]/50 p-4 rounded-lg border border-gray-800 flex justify-between items-center opacity-70"
-                >
-                  <div>
-                    <h3 className="font-bold text-gray-400 line-through">
-                      {proj.title}
-                    </h3>
-                    <p className="text-sm text-gray-500">
-                      Author:{" "}
-                      <span className="font-semibold text-gray-400">
-                        {proj.author}
-                      </span>{" "}
-                      | Points Awarded:{" "}
-                      <span className="font-bold text-yellow-500">
-                        {proj.points}
-                      </span>
-                    </p>
-                    {proj.committee && (
-                      <p className="text-xs text-gray-600 mt-1">
-                        Committee: <span className="capitalize">{proj.committee}</span>
-                      </p>
-                    )}
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="text-center text-gray-500 py-10">
-                <Archive size={48} className="mx-auto" />
-                <p className="mt-2">No completed projects yet.</p>
               </div>
-            )}
-          </div>
+            ))
+          ) : (
+            <p className="text-gray-500 text-center py-10">
+              No pending project requests.
+            </p>
+          )}
+        </div>
 
-          {/* Tab 4: Declined Projects */}
-          <div className="space-y-4">
-            {declinedProjects.length > 0 ? (
-              declinedProjects.map((proj) => (
-                <div
-                  key={proj.id}
-                  className="bg-[#0f172a]/50 p-4 rounded-lg border border-red-900/30 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 opacity-70"
-                >
-                  <div>
-                    <h3 className="font-bold text-red-400">{proj.title}</h3>
-                    <p className="text-sm text-gray-400">
-                      Submitted by:{" "}
-                      <span className="font-semibold text-gray-300">
-                        {proj.author}
-                      </span>
+        {/* Tab 2: Approved Projects */}
+        <div className="space-y-4">
+          {approvedProjects.length > 0 ? (
+            approvedProjects.map((proj) => (
+              <div
+                key={proj.id}
+                className="bg-[#0f172a] p-4 rounded-lg border border-gray-700 flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
+              >
+                <div>
+                  <h3 className="font-bold">{proj.title}</h3>
+                  <p className="text-sm text-gray-400">
+                    Author:{" "}
+                    <span className="font-semibold text-gray-300">
+                      {proj.author}
+                    </span>{" "}
+                    | Points:{" "}
+                    <span className="font-bold text-yellow-400">
+                      {proj.points}
+                    </span>
+                  </p>
+                  {proj.committee && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      Committee: <span className="capitalize">{proj.committee}</span>
                     </p>
-                    {proj.rejection_reason && (
-                      <p className="text-sm text-red-300 mt-2 italic">
-                        Reason: {proj.rejection_reason}
-                      </p>
-                    )}
-                    {proj.committee && (
-                      <p className="text-xs text-gray-600 mt-1">
-                        Committee: <span className="capitalize">{proj.committee}</span>
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex gap-3 flex-shrink-0 items-center">
-                    <button
-                      className="text-blue-400 hover:text-blue-300"
-                      title="Restore Project"
-                      onClick={() => handleRestoreProject(proj.id, proj.title)}
-                    >
-                      <Check size={18} />
-                    </button>
-                    <button
-                      className="text-red-400 hover:text-red-300"
-                      title="Delete Permanently"
-                      onClick={() => handleDelete(proj.id, proj.title)}
-                    >
-                      <Trash2 size={18} />
-                    </button>
-                  </div>
+                  )}
+                  {proj.members && proj.members.length > 0 && (
+                    <p className="text-xs text-blue-400 mt-1">
+                      Team ({proj.members.length}): {proj.members.join(", ")}
+                    </p>
+                  )}
                 </div>
-              ))
-            ) : (
-              <div className="text-center text-gray-500 py-10">
-                <XCircle size={48} className="mx-auto" />
-                <p className="mt-2">No declined projects.</p>
+                <div className="flex gap-3 flex-shrink-0 items-center">
+                  <button
+                    className="text-blue-400 hover:text-blue-300"
+                    title="Edit Project"
+                    onClick={() => openApprovalModal(proj)}
+                  >
+                    <Edit size={18} />
+                  </button>
+                  <button
+                    className="text-red-400 hover:text-red-300"
+                    title="Delete Project"
+                    onClick={() => handleDelete(proj.id, proj.title)}
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                  <button
+                    onClick={() => handleMarkCompleted(proj.id, proj.title)}
+                    className="flex items-center gap-1 text-sm bg-gray-600 hover:bg-gray-700 px-3 py-1 rounded-lg transition"
+                  >
+                    <Archive size={14} /> Mark Completed
+                  </button>
+                </div>
               </div>
-            )}
-          </div>
+            ))
+          ) : (
+            <p className="text-gray-500 text-center py-10">
+              No approved projects.
+            </p>
+          )}
+        </div>
+
+        {/* Tab 3: Completed Projects */}
+        <div className="space-y-4">
+          {completedProjects.length > 0 ? (
+            completedProjects.map((proj) => (
+              <div
+                key={proj.id}
+                className="bg-[#0f172a]/50 p-4 rounded-lg border border-gray-800 flex justify-between items-center opacity-70"
+              >
+                <div>
+                  <h3 className="font-bold text-gray-400 line-through">
+                    {proj.title}
+                  </h3>
+                  <p className="text-sm text-gray-500">
+                    Author:{" "}
+                    <span className="font-semibold text-gray-400">
+                      {proj.author}
+                    </span>{" "}
+                    | Points Awarded:{" "}
+                    <span className="font-bold text-yellow-500">
+                      {proj.points}
+                    </span>
+                  </p>
+                  {proj.committee && (
+                    <p className="text-xs text-gray-600 mt-1">
+                      Committee: <span className="capitalize">{proj.committee}</span>
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="text-center text-gray-500 py-10">
+              <Archive size={48} className="mx-auto" />
+              <p className="mt-2">No completed projects yet.</p>
+            </div>
+          )}
+        </div>
+
+        {/* Tab 4: Declined Projects */}
+        <div className="space-y-4">
+          {declinedProjects.length > 0 ? (
+            declinedProjects.map((proj) => (
+              <div
+                key={proj.id}
+                className="bg-[#0f172a]/50 p-4 rounded-lg border border-red-900/30 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 opacity-70"
+              >
+                <div>
+                  <h3 className="font-bold text-red-400">{proj.title}</h3>
+                  <p className="text-sm text-gray-400">
+                    Submitted by:{" "}
+                    <span className="font-semibold text-gray-300">
+                      {proj.author}
+                    </span>
+                  </p>
+                  {proj.rejection_reason && (
+                    <p className="text-sm text-red-300 mt-2 italic">
+                      Reason: {proj.rejection_reason}
+                    </p>
+                  )}
+                  {proj.committee && (
+                    <p className="text-xs text-gray-600 mt-1">
+                      Committee: <span className="capitalize">{proj.committee}</span>
+                    </p>
+                  )}
+                </div>
+                <div className="flex gap-3 flex-shrink-0 items-center">
+                  <button
+                    className="text-blue-400 hover:text-blue-300"
+                    title="Restore Project"
+                    onClick={() => handleRestoreProject(proj.id, proj.title)}
+                  >
+                    <Check size={18} />
+                  </button>
+                  <button
+                    className="text-red-400 hover:text-red-300"
+                    title="Delete Permanently"
+                    onClick={() => handleDelete(proj.id, proj.title)}
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="text-center text-gray-500 py-10">
+              <XCircle size={48} className="mx-auto" />
+              <p className="mt-2">No declined projects.</p>
+            </div>
+          )}
+        </div>
       </Tabs>
 
       {/* --- ADD PROJECT MODAL --- */}
@@ -835,7 +835,7 @@ export default function AdminProjects() {
                   ))}
                 </ul>
               )}
-              
+
               {editFormData.members.length > 0 && (
                 <p className="text-xs text-gray-500 mt-3 italic">
                   ⚠️ Removing members will update the project when you save changes.
@@ -937,9 +937,8 @@ export default function AdminProjects() {
         >
           <div className="flex flex-col items-center text-center">
             <div
-              className={`mx-auto flex h-14 w-14 items-center justify-center rounded-full ${
-                confirmAction.color === "red" ? "bg-red-600" : "bg-blue-600"
-              }`}
+              className={`mx-auto flex h-14 w-14 items-center justify-center rounded-full ${confirmAction.color === "red" ? "bg-red-600" : "bg-blue-600"
+                }`}
             >
               <AlertTriangle className="h-8 w-8 text-white" />
             </div>
@@ -963,11 +962,10 @@ export default function AdminProjects() {
             <button
               type="button"
               onClick={confirmAction.onConfirm}
-              className={`w-full rounded-lg px-6 py-2 text-sm font-semibold text-white shadow-sm sm:w-auto transition ${
-                confirmAction.color === "red"
+              className={`w-full rounded-lg px-6 py-2 text-sm font-semibold text-white shadow-sm sm:w-auto transition ${confirmAction.color === "red"
                   ? "bg-red-600 hover:bg-red-700"
                   : "bg-blue-600 hover:bg-blue-700"
-              }`}
+                }`}
             >
               {confirmAction.confirmText}
             </button>
