@@ -12,7 +12,7 @@ export default function LoginForm(_props: LoginFormProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
+  const [_loading, setLoading] = useState(false);
 
  const handleSumbit = async (e: React.FormEvent) => {
     e.preventDefault();
