@@ -1,4 +1,9 @@
-import { useState } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  type ReactNode,
+} from "react";
 import { toast } from "sonner";
 import type {
   Role,
@@ -8,23 +13,50 @@ import type {
   UserApiResponse,
 } from "../admin.types";
 
-export function useAdminData() {
+/* --------------------------------------------------
+   Context setup
+-------------------------------------------------- */
+
+type AdminDataContextType = {
+  members: Member[];
+  addMember: (
+    name: string,
+    email: string,
+    password: string,
+    role: Role,
+    committee: Committee,
+    is_admin: boolean,
+    memo_tokens: number
+  ) => Promise<void>;
+  getMembers: () => Promise<void>;
+  deleteMember: (id: string) => Promise<void>;
+  updateMember: (
+    id: string,
+    updatedData: MemberUpdatePayload
+  ) => Promise<void>;
+};
+
+const AdminDataContext = createContext<AdminDataContextType | undefined>(
+  undefined
+);
+
+
+export function AdminDataProvider({ children }: { children: ReactNode }) {
   const [members, setMembers] = useState<Member[]>([]);
 
-  // ✅ Common error handler for fetch calls
+  // ✅ Common error handler
   const handleResponseError = async (res: Response, fallbackMsg: string) => {
     let errorData: { msg?: string; message?: string } = {};
     try {
       errorData = await res.json();
-    } catch {
-      // ignore parsing errors
-    }
+    } catch { }
 
     const message =
       errorData?.msg ||
       errorData?.message ||
       fallbackMsg ||
       `Request failed with status ${res.status}`;
+
     throw new Error(message);
   };
 
@@ -58,8 +90,7 @@ export function useAdminData() {
         await handleResponseError(res, "Failed to add user");
       }
 
-      const data = await res.json();
-      console.log("✅ User added:", data);
+      await res.json();
       await getMembers();
       toast.success("User added successfully");
     } catch (e) {
@@ -69,7 +100,6 @@ export function useAdminData() {
     }
   };
 
-  // ✅ Get all members
   const getMembers = async () => {
     try {
       const res = await fetch("http://127.0.0.1:5000/api/users/get-all-users", {
@@ -92,6 +122,7 @@ export function useAdminData() {
         memo_tokens: u.memo_tokens,
         is_admin: u.is_admin,
       }));
+
       setMembers(fetchedMembers);
     } catch (e) {
       console.error("❌ Error fetching users:", e);
@@ -99,7 +130,6 @@ export function useAdminData() {
     }
   };
 
-  // ✅ Delete a member
   const deleteMember = async (id: string) => {
     try {
       const res = await fetch(
@@ -123,8 +153,10 @@ export function useAdminData() {
     }
   };
 
-  // ✅ Update a member
-  const updateMember = async (id: string, updatedData: MemberUpdatePayload) => {
+  const updateMember = async (
+    id: string,
+    updatedData: MemberUpdatePayload
+  ) => {
     const toastId = toast.loading("Updating member...");
     try {
       const res = await fetch(
@@ -146,10 +178,8 @@ export function useAdminData() {
         { id: toastId }
       );
 
-      setMembers((prevMembers) =>
-        prevMembers.map((member) =>
-          member.id === id ? { ...member, ...updatedData } : member
-        )
+      setMembers((prev) =>
+        prev.map((m) => (m.id === id ? { ...m, ...updatedData } : m))
       );
     } catch (e) {
       console.error("❌ Error updating member:", e);
@@ -161,11 +191,33 @@ export function useAdminData() {
     }
   };
 
-  return {
-    members,
-    addMember,
-    getMembers,
-    deleteMember,
-    updateMember,
-  };
+  return (
+    <AdminDataContext.Provider
+      value={{
+        members,
+        addMember,
+        getMembers,
+        deleteMember,
+        updateMember,
+      }}
+    >
+      {children}
+    </AdminDataContext.Provider>
+  );
+}
+
+/* --------------------------------------------------
+   Consumer hook
+-------------------------------------------------- */
+
+export function useAdminData() {
+  const context = useContext(AdminDataContext);
+
+  if (!context) {
+    throw new Error(
+      "useAdminData must be used inside an AdminDataProvider"
+    );
+  }
+
+  return context;
 }
