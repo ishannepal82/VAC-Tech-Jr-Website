@@ -17,6 +17,11 @@ def _parse_bool_param(value: str) -> Optional[bool]:
         return False
     return None
 
+def check_user_is_admin():
+    user = get_current_user()
+    if user and user.get('is_admin', False):
+        return True
+
 
 @notifications_bp.route('/get-notifications', methods=['GET'])
 def get_notifications():
@@ -30,10 +35,23 @@ def get_notifications():
         if not user:
             return jsonify({'msg': 'Unauthorized'}), 401
 
+        admin = bool(user.get('is_admin'))
+
         notifications_ref = db.collection('notifications')
-        query = notifications_ref.where('to_email', '==', user['email']).order_by(
+
+        if admin:
+            query = notifications_ref.where(
+                'to_email', 'in', [user['email'], 'admin']
+            )
+        else:
+            query = notifications_ref.where(
+                'to_email', '==', user['email']
+            )
+
+        query = query.order_by(
             'created_at', direction=firestore.Query.DESCENDING
         )
+
 
         read_status_param = request.args.get('read_status')
         if read_status_param is not None:

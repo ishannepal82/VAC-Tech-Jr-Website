@@ -18,7 +18,7 @@ export const Intruder = () => {
 
     const timeoutIds: ReturnType<typeof setTimeout>[] = [];
 
-    let delay = 1500;
+    const delay = 1500;
     lines.forEach((line, index) => {
       const id = setTimeout(() => {
         setLogLines((prev) => [...prev, line]);

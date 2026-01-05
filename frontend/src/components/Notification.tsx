@@ -55,6 +55,7 @@ const NotificationItem = ({
 }) => {
   const timestamp = new Date(notification.created_at);
   const isApprovalType = notification.type === "approval";
+  const isProjectCompletion = !notification.uid && notification.project_id;
 
   console.log("Notification:", {
     type: notification.type,
@@ -63,6 +64,7 @@ const NotificationItem = ({
     hasApprove: !!onApprove,
     hasDecline: !!onDecline,
     isApprovalType,
+    isProjectCompletion,
   });
 
   return (
@@ -85,7 +87,7 @@ const NotificationItem = ({
         </div>
         <div
           className="flex-grow cursor-pointer"
-          onClick={!isApprovalType ? onRead : undefined}
+          onClick={!isApprovalType && !isProjectCompletion ? onRead : undefined}
         >
           <p
             className={`font-semibold ${
@@ -96,19 +98,13 @@ const NotificationItem = ({
           </p>
           <p className="text-sm text-gray-400 mt-1">{notification.message}</p>
 
-          {/* ✅ Updated debug info */}
-          <p className="text-xs text-orange-400 mt-1">
-            Type: {notification.type} | UID: {notification.uid || "missing"} | Project:{" "}
-            {notification.project_id}
-          </p>
-
           <p className="text-xs text-blue-300/70 mt-2">
             {formatDistanceToNow(timestamp, { addSuffix: true })}
           </p>
         </div>
       </div>
 
-      {(isApprovalType || notification.title.toLowerCase().includes("request")) && (
+      {(isApprovalType || isProjectCompletion || notification.title.toLowerCase().includes("request")) && (
         <div className="flex gap-3 mt-4 pt-3 border-t border-[#254b80]">
           {isProcessing ? (
             <div className="flex items-center justify-center w-full py-2 text-blue-400">
@@ -118,7 +114,16 @@ const NotificationItem = ({
           ) : (
             <>
               <button
-                onClick={onApprove || (() => toast.error("No uid found in notification"))}
+                onClick={
+                  onApprove ||
+                  (() =>
+                    toast.error(
+                      isProjectCompletion
+                        ? "No project ID found"
+                        : "No uid found in notification"
+                    )
+                  )
+                }
                 className="flex-1 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-semibold py-2.5 px-4 rounded-lg transition-all hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={isProcessing || !onApprove}
               >
@@ -126,7 +131,16 @@ const NotificationItem = ({
                 <span>Approve</span>
               </button>
               <button
-                onClick={onDecline || (() => toast.error("No uid found in notification"))}
+                onClick={
+                  onDecline ||
+                  (() =>
+                    toast.error(
+                      isProjectCompletion
+                        ? "No project ID found"
+                        : "No uid found in notification"
+                    )
+                  )
+                }
                 className="flex-1 flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-semibold py-2.5 px-4 rounded-lg transition-all hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={isProcessing || !onDecline}
               >
@@ -138,7 +152,7 @@ const NotificationItem = ({
         </div>
       )}
 
-      {isApprovalType && !notification.uid && (
+      {isApprovalType && !notification.uid && !isProjectCompletion && (
         <div className="mt-3 p-2 bg-yellow-900/30 border border-yellow-600/50 rounded text-yellow-200 text-xs">
           ⚠️ This is an approval notification but uid is missing from the backend
         </div>
@@ -217,9 +231,10 @@ const Notification = ({ onClose }: { onClose: () => void }) => {
 
       toast.success("User approved successfully!");
       setNotifications((prev) => prev.filter((_, idx) => idx !== notificationIndex));
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Approval error:", err);
-      toast.error(err.message || "Failed to approve user");
+      const errorMessage = err instanceof Error ? err.message : "Failed to approve user";
+      toast.error(errorMessage);
     } finally {
       setProcessingIds((prev) => {
         const updated = new Set(prev);
@@ -260,9 +275,94 @@ const Notification = ({ onClose }: { onClose: () => void }) => {
 
       toast.success("User declined successfully!");
       setNotifications((prev) => prev.filter((_, idx) => idx !== notificationIndex));
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Decline error:", err);
-      toast.error(err.message || "Failed to decline user");
+      const errorMessage = err instanceof Error ? err.message : "Failed to decline user";
+      toast.error(errorMessage);
+    } finally {
+      setProcessingIds((prev) => {
+        const updated = new Set(prev);
+        updated.delete(notifId);
+        return updated;
+      });
+    }
+  };
+
+  const handleApproveProjectCompletion = async (
+    projectId: string,
+    notificationIndex: number
+  ) => {
+    const notifId = notifications[notificationIndex].id || `project-${projectId}`;
+    setProcessingIds((prev) => new Set(prev).add(notifId));
+
+    try {
+      console.log(`Approving completion for project ${projectId}`);
+
+      const res = await fetch(
+        `${baseUrl}/api/projects/projects/${projectId}/approve-completion`,
+        {
+          method: "PUT",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.msg || "Failed to approve project completion");
+      }
+
+      toast.success("Project completion approved successfully!");
+      setNotifications((prev) => prev.filter((_, idx) => idx !== notificationIndex));
+    } catch (err: unknown) {
+      console.error("Approval error:", err);
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to approve project completion";
+      toast.error(errorMessage);
+    } finally {
+      setProcessingIds((prev) => {
+        const updated = new Set(prev);
+        updated.delete(notifId);
+        return updated;
+      });
+    }
+  };
+
+  const handleDeclineProjectCompletion = async (
+    projectId: string,
+    notificationIndex: number
+  ) => {
+    const notifId = notifications[notificationIndex].id || `project-${projectId}`;
+    setProcessingIds((prev) => new Set(prev).add(notifId));
+
+    try {
+      console.log(`Declining completion for project ${projectId}`);
+
+      const res = await fetch(
+        `${baseUrl}/api/projects/projects/${projectId}/decline-completion`,
+        {
+          method: "PUT",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.msg || "Failed to decline project completion");
+      }
+
+      toast.success("Project completion declined successfully!");
+      setNotifications((prev) => prev.filter((_, idx) => idx !== notificationIndex));
+    } catch (err: unknown) {
+      console.error("Decline error:", err);
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to decline project completion";
+      toast.error(errorMessage);
     } finally {
       setProcessingIds((prev) => {
         const updated = new Set(prev);
@@ -308,8 +408,9 @@ const Notification = ({ onClose }: { onClose: () => void }) => {
           ) : notifications.length > 0 ? (
             <div className="divide-y divide-[#254b80]">
               {notifications.map((notif, idx) => {
-                const notifId = notif.id || `${notif.project_id}-${notif.uid}`;
+                const notifId = notif.id || `${notif.project_id}-${notif.uid || "project"}`;
                 const isProcessing = processingIds.has(notifId);
+                const isProjectCompletion = !notif.uid && notif.project_id;
 
                 return (
                   <NotificationItem
@@ -317,12 +418,16 @@ const Notification = ({ onClose }: { onClose: () => void }) => {
                     notification={notif}
                     onRead={() => handleNotificationClick(idx)}
                     onApprove={
-                      notif.uid && notif.project_id
+                      isProjectCompletion
+                        ? () => handleApproveProjectCompletion(notif.project_id, idx)
+                        : notif.uid && notif.project_id
                         ? () => handleApproveUser(notif.project_id, notif.uid!, idx)
                         : undefined
                     }
                     onDecline={
-                      notif.uid && notif.project_id
+                      isProjectCompletion
+                        ? () => handleDeclineProjectCompletion(notif.project_id, idx)
+                        : notif.uid && notif.project_id
                         ? () => handleDeclineUser(notif.project_id, notif.uid!, idx)
                         : undefined
                     }

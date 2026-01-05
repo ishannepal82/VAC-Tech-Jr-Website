@@ -25,6 +25,7 @@ import PreLoginLanding from "./pages/Landing";
 import Intruder from "./pages/intruder";
 import ErrorFallback from "./pages/ErrorFallback";
 import { Toaster } from "sonner";
+import { AdminDataProvider } from "./admin/context/AdminDataContext";
 
 const PublicLayout = () => (
   <>
@@ -37,6 +38,7 @@ const PublicLayout = () => (
 function App() {
   return (
     <BrowserRouter>
+      <AdminDataProvider>
       <Toaster richColors position="top-center" />
       <ScrollToTop />
       <Routes>
@@ -56,8 +58,7 @@ function App() {
           <Route path="ProjectsSection" element={<ProjectsSection />} />
           <Route path="projects/:id" element={<ProjectDetailPage />} />
         </Route>
-
-        <Route
+          <Route
           path="/admin/*"
           element={
             <>
@@ -78,6 +79,7 @@ function App() {
           }
         />
       </Routes>
+      </AdminDataProvider>
     </BrowserRouter>
   );
 }

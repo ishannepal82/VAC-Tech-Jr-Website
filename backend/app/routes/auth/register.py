@@ -24,7 +24,7 @@ def register_user():
 
         auth.set_custom_user_claims(uid, {'role': 'member', 'is_admin': False})
         db = current_app.config['db']
-        user_ref = db.collection('Users').document(uid)
+        user_ref = db.collection('users').document(uid)
 
         if user_ref.get().exists:
             return jsonify({'msg': 'User already exists'}), 400

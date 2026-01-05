@@ -17,7 +17,23 @@ type Event = {
   time: string;
   location: string;
   category: EventCategory;
-  status: EventStatus; // new status field
+  status: EventStatus;
+};
+
+// Backend API response type
+type BackendEvent = {
+  id: string;
+  name: string;
+  description: string;
+  date: string; // ISO string from backend
+  time: string;
+  venue: string;
+  status: string;
+  category?: string;
+};
+
+type BackendEventsResponse = {
+  events: BackendEvent[];
 };
 
 const isSameDay = (a: Date, b: Date) =>
@@ -51,28 +67,26 @@ export default function EventsPage() {
 
       if (!res.ok) throw new Error("Failed to fetch events");
 
-      const data = await res.json();
+      const data: BackendEventsResponse = await res.json();
 
       // Make sure data.events exists and is an array
       if (!Array.isArray(data.events)) throw new Error("Invalid data format");
 
-      const parsedEvents: Event[] = data.events.map((ev: any) => ({
+      const parsedEvents: Event[] = data.events.map((ev: BackendEvent) => ({
         id: ev.id,
-        title: ev.name, // map backend `name` to title
+        title: ev.name,
         description: ev.description,
-        date: new Date(ev.date), // convert string to Date
+        date: new Date(ev.date),
         time: ev.time,
-        location: ev.venue, // map backend `venue` to location
-        category: "other", // optional default category
-        status: ev.status
-          ? ev.status.charAt(0).toUpperCase() + ev.status.slice(1) // "upcoming" -> "Upcoming"
-          : "Upcoming",
+        location: ev.venue,
+        category: (ev.category as EventCategory) || "other",
+        status: (ev.status.charAt(0).toUpperCase() + ev.status.slice(1)) as EventStatus,
       }));
 
       setEvents(parsedEvents);
     } catch (error) {
       console.error("Error fetching events:", error);
-      setEvents([]); // fallback
+      setEvents([]);
       handleError(error, "Unable to fetch events.");
     } finally {
       setLoading(false);
@@ -83,11 +97,12 @@ export default function EventsPage() {
     fetchEvents();
   }, [fetchEvents]);
 
-  // Scroll to first upcoming event of the selected date
+  // Filter and sort upcoming events
   const upcomingEvents = events
     .filter((event) => event.status === "Upcoming")
     .sort((a, b) => a.date.getTime() - b.date.getTime());
 
+  // Scroll to first upcoming event of the selected date
   useEffect(() => {
     const firstEventOfTheDay = upcomingEvents.find((event) =>
       isSameDay(event.date, selectedDate)
@@ -103,9 +118,6 @@ export default function EventsPage() {
   if (isLoading) {
     return <PageLoader message="Loading events..." />;
   }
-  // ----------------ref container------------------
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  // -----------------------------------------------
 
   return (
     <section className="min-h-screen w-full bg-[#0a1a33] text-white font-poppins py-12 px-4 sm:px-6 lg:px-8">
@@ -126,7 +138,7 @@ export default function EventsPage() {
               onChange={(value) => setSelectedDate(value as Date)}
               value={selectedDate}
               tileClassName={({ date, view }) =>
-                view === "month" && date.getDay() === 6 ? "saturday-holiday" : null
+                view === "month" && date.getDay() === 6 ? "saturday-holiday" : ""
               }
               tileContent={({ date, view }) => {
                 if (view === "month") {
@@ -165,14 +177,16 @@ export default function EventsPage() {
                 </div>
               ) : (
                 upcomingEvents.map((event) => (
-
                   <div
                     key={event.id}
-                    ref={containerRef}
-                    className={`bg-[#112240] p-5 rounded-xl border-2 transition-all duration-300 shadow-lg ${isSameDay(event.date, selectedDate)
-                      ? "border-[#5ea4ff]"
-                      : "border-[#1a2f55] hover:border-[#3a507e]"
-                      }`}
+                    ref={(el) => {
+                      eventRefs.current[event.id] = el;
+                    }}
+                    className={`bg-[#112240] p-5 rounded-xl border-2 transition-all duration-300 shadow-lg ${
+                      isSameDay(event.date, selectedDate)
+                        ? "border-[#5ea4ff]"
+                        : "border-[#1a2f55] hover:border-[#3a507e]"
+                    }`}
                   >
                     <p className="text-sm font-semibold text-[#5ea4ff] mb-1">
                       {event.date.toLocaleDateString("en-US", {

@@ -10,6 +10,8 @@ import {
   GitCommit,
   BookOpen,
   Plus,
+  FolderGit2,
+  Send,
 } from "lucide-react";
 import CreateProjectModal from "../components/CreateProjectModal";
 import WorkshopModal from "../components/WorkshopModal";
@@ -36,10 +38,17 @@ interface Contribution {
   description?: string;
 }
 
+interface Project {
+  id: string;
+  title: string;
+  description: string;
+}
+
 interface DashboardState {
   userInfo: UserInfo;
   contributions: Contribution[];
   workshops: Workshop[];
+  projects: Project[];
 }
 
 // API Response types
@@ -63,6 +72,11 @@ interface DashboardApiResponse {
 interface WorkshopsApiResponse {
   msg: string;
   workshops: Workshop[];
+}
+
+interface ProjectsApiResponse {
+  msg: string;
+  projects: Project[];
 }
 
 // ============ Sub-Components ============
@@ -117,6 +131,45 @@ const DashboardCard: React.FC<DashboardCardProps> = ({
   </div>
 );
 
+interface ProjectCardProps {
+  project: Project;
+  onRequestCompletion: (projectId: string) => void;
+  isSubmitting: boolean;
+}
+
+const ProjectCard: React.FC<ProjectCardProps> = ({
+  project,
+  onRequestCompletion,
+  isSubmitting,
+}) => {
+  return (
+    <div className="bg-[#0a1a33] rounded-lg p-4 hover:bg-[#112244] transition-colors">
+      <div className="flex items-start justify-between">
+        <div className="flex items-start gap-3 flex-1">
+          <FolderGit2 className="text-[#9cc9ff] mt-1 flex-shrink-0" size={20} />
+          <div className="flex-1 min-w-0">
+            <h4 className="font-medium text-gray-200 truncate">
+              {project.title}
+            </h4>
+            <p className="text-sm text-gray-400 mt-1 line-clamp-2">
+              {project.description}
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => onRequestCompletion(project.id)}
+          disabled={isSubmitting}
+          className="ml-3 flex items-center gap-1.5 px-3 py-1.5 bg-[#4a90d9] hover:bg-[#3a7bc8] disabled:bg-gray-600 disabled:cursor-not-allowed text-white text-xs font-medium rounded-lg transition-colors"
+        >
+          <Send size={14} />
+          {isSubmitting ? "Sending..." : "Request Completion"}
+        </button>
+      </div>
+    </div>
+  );
+};
+
 // ============ Default/Initial State ============
 
 const initialDashboardState: DashboardState = {
@@ -129,6 +182,7 @@ const initialDashboardState: DashboardState = {
   },
   contributions: [],
   workshops: [],
+  projects: [],
 };
 
 // ============ Main Component ============
@@ -145,6 +199,9 @@ export default function DashboardPage() {
   );
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
+  const [requestingCompletionId, setRequestingCompletionId] = useState<
+    string | null
+  >(null);
 
   const { isLoading, setLoading, handleError } = usePageStatus(
     "Failed to load dashboard data."
@@ -176,7 +233,6 @@ export default function DashboardPage() {
 
       const result: DashboardApiResponse = await response.json();
 
-      // Map API response to component state with proper defaults
       const userInfoFromApi = result.user_info;
 
       setDashboardData((prev) => ({
@@ -238,10 +294,44 @@ export default function DashboardPage() {
     }
   }, [handleError]);
 
+  // Fetch projects data
+  const fetchProjects = useCallback(async () => {
+    try {
+      const response = await fetch(
+        "http://127.0.0.1:5000/api/projects/projects/user/get-projects",
+        {
+          method: "GET",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+
+      const result: ProjectsApiResponse = await response.json();
+
+      setDashboardData((prev) => ({
+        ...prev,
+        projects: result.projects ?? [],
+      }));
+    } catch (error) {
+      console.error("Error fetching projects:", error);
+      handleError(
+        error instanceof Error ? error : new Error("Failed to fetch projects"),
+        "Unable to load projects."
+      );
+    }
+  }, [handleError]);
+
   useEffect(() => {
     fetchDashboardData();
     fetchWorkshops();
-  }, [fetchDashboardData, fetchWorkshops]);
+    fetchProjects();
+  }, [fetchDashboardData, fetchWorkshops, fetchProjects]);
 
   // Format date helper
   const formatDate = (dateString: string): string => {
@@ -284,7 +374,6 @@ export default function DashboardPage() {
 
       const result = await response.json();
 
-      // Add the new workshop to local state
       const newWorkshop: Workshop = {
         ...workshopData,
         id: result.id,
@@ -304,6 +393,45 @@ export default function DashboardPage() {
       );
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  // Handle project completion request
+  const handleRequestCompletion = async (projectId: string): Promise<void> => {
+    setRequestingCompletionId(projectId);
+
+    try {
+      const response = await fetch(
+        `http://127.0.0.1:5000/api/projects/projects/request-completion/${projectId}`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        } 
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(
+          errorData.msg ||
+            `Failed to request completion: ${response.status}`
+        );
+      }
+
+      // Optionally remove the project from the list or refresh
+      await fetchProjects();
+    } catch (error) {
+      console.error("Error requesting completion:", error);
+      handleError(
+        error instanceof Error
+          ? error
+          : new Error("Failed to request completion"),
+        "Unable to submit completion request. Please try again."
+      );
+    } finally {
+      setRequestingCompletionId(null);
     }
   };
 
@@ -338,7 +466,6 @@ export default function DashboardPage() {
         );
       }
 
-      // Remove from local state only after successful deletion
       setDashboardData((prev) => ({
         ...prev,
         workshops: prev.workshops.filter((w) => w.id !== workshopToDelete.id),
@@ -377,7 +504,7 @@ export default function DashboardPage() {
     return <PageLoader message="Loading Dashboard..." />;
   }
 
-  const { userInfo, contributions, workshops } = dashboardData;
+  const { userInfo, contributions, workshops, projects } = dashboardData;
 
   return (
     <>
@@ -512,22 +639,58 @@ export default function DashboardPage() {
               </ul>
             </DashboardCard>
 
-            {/* Start Project Button */}
-            <button
-              type="button"
-              onClick={openProjectModal}
-              className="bg-[#254b80] rounded-xl p-6 flex flex-col justify-center items-center text-center cursor-pointer hover:bg-[#1f3c66] duration-300 hover:scale-105 transition-transform"
-            >
-              <div className="w-20 h-20 bg-[#1a2f55] rounded-full flex items-center justify-center mb-4">
-                <Plus className="text-[#b3d9ff]" size={40} />
-              </div>
-              <h4 className="font-semibold text-lg text-[#b3d9ff]">
-                Start a Project
-              </h4>
-              <p className="text-sm text-gray-300 mt-1">
-                Have an idea? Bring it to life.
-              </p>
-            </button>
+            {/* Projects and Start Project Button Row */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Projects Card - Takes 2/3 width */}
+              <DashboardCard title="Projects Completion" className="md:col-span-2">
+                <div className="flex flex-col space-y-3 max-h-96 overflow-y-auto">
+                  {projects.length > 0 ? (
+                    projects.map((project) => (
+                      <ProjectCard
+                        key={project.id}
+                        project={project}
+                        onRequestCompletion={handleRequestCompletion}
+                        isSubmitting={requestingCompletionId === project.id}
+                      />
+                    ))
+                  ) : (
+                    <div className="text-center py-8">
+                      <FolderGit2
+                        className="mx-auto text-gray-500 mb-3"
+                        size={40}
+                      />
+                      <p className="text-gray-400 text-sm">
+                        No projects yet. Start your first project!
+                      </p>
+                      <button
+                        type="button"
+                        onClick={openProjectModal}
+                        className="mt-3 text-[#4a90d9] hover:text-[#3a7bc8] text-sm font-medium"
+                      >
+                        Create a project
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </DashboardCard>
+
+              {/* Start Project Button - Takes 1/3 width */}
+              <button
+                type="button"
+                onClick={openProjectModal}
+                className="bg-[#254b80] rounded-xl p-6 flex flex-col justify-center items-center text-center cursor-pointer hover:bg-[#1f3c66] duration-300 hover:scale-105 transition-transform h-full"
+              >
+                <div className="w-16 h-16 bg-[#1a2f55] rounded-full flex items-center justify-center mb-3">
+                  <Plus className="text-[#b3d9ff]" size={32} />
+                </div>
+                <h4 className="font-semibold text-base text-[#b3d9ff]">
+                  Start a Project
+                </h4>
+                <p className="text-xs text-gray-300 mt-1">
+                  Have an idea? Bring it to life.
+                </p>
+              </button>
+            </div>
           </div>
         </div>
       </main>

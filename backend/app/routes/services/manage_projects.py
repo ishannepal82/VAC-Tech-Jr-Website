@@ -403,6 +403,30 @@ def decline_user(pid, uid):
         return jsonify({'msg': 'Successfully declined the user for the project'}), 200
     except Exception as e:
         return jsonify({'msg': 'Internal server error', 'error': str(e)}), 500
+    
+@projects_bp.route('/projects/user/get-projects', methods=['GET'])
+def get_user_projects():
+    try:
+        user = get_current_user()   
+        if not user:
+            return jsonify({'msg': 'Unauthorized User'}), 401
+        uid = user.get('uid')
+        db = current_app.config['db']
+
+        project_ref = db.collection('projects')
+        author_ref = db.collection('Users').document(uid)
+        author = author_ref.get().to_dict()
+
+        author_email = author.get('email', '')
+        docs = project_ref.where('author_email', '==', author_email, ).where('is_approved', '==', True).stream()
+        projects = []
+        for doc in docs:
+            projects.append({"id": doc.id, **doc.to_dict()})
+        print(projects)
+        return jsonify({'projects': projects}), 200
+    except Exception as e:
+        print(e)
+        return jsonify({'msg': 'Internal server error', 'error': str(e)}), 500
 
 @projects_bp.route('/projects/request-completion/<pid>', methods=['POST'])
 def request_completion(pid):
@@ -438,7 +462,7 @@ def request_completion(pid):
             "Project Completion Requested",
             f"The project '{project_data['title']}' by {project_data['author']} has requested completion.",
             "admin",
-            "ishannepal04@gmail.com",  
+            "admin",  
             pid
         )
 
