@@ -332,8 +332,8 @@ def join_project(pid):
     except Exception as e:
         return jsonify({'msg': 'Internal server error', 'error': str(e)}), 500
 
-@projects_bp.route('/approve_user/<pid>/<uid>', methods=['PUT'])
-def approve_user(pid, uid):
+@projects_bp.route('/approve_user/<pid>/<uid>/<nid>', methods=['PUT'])
+def approve_user(pid, uid, nid):
     try:
         db = current_app.config['db']
         current_user = get_current_user()
@@ -341,7 +341,7 @@ def approve_user(pid, uid):
         project_doc = project_ref.get()
         if not project_doc.exists:
             return jsonify({'msg': "Project does not exist"}), 404
-
+        notification_ref = db.collection('notifications').document(nid)
         project_data = project_doc.to_dict()
         if not current_user or (not current_user.get('is_admin', False) and current_user['email'] != project_data['author_email']):
             return jsonify({'msg': 'Unauthorized User'}), 401
@@ -357,6 +357,7 @@ def approve_user(pid, uid):
             "members": firestore.ArrayUnion([user_data['name']])
         })
 
+        notification_ref.delete()
         send_notification(
             db,
             "Project Membership Approved",
@@ -366,7 +367,7 @@ def approve_user(pid, uid):
             pid,
             current_user.get('email', 'admin@email.com')
         )
-        # Log contribution
+
         db.collection('contributions').add({
             "uid": uid,
             "name": user_data.get("name", ""),
@@ -382,10 +383,13 @@ def approve_user(pid, uid):
     except Exception as e:
         return jsonify({'msg': 'Internal server error', 'error': str(e)}), 500
 
-@projects_bp.route('/decline_user/<pid>/<uid>', methods=['PUT'])
-def decline_user(pid, uid):
+@projects_bp.route('/decline_user/<pid>/<uid>/<nid>', methods=['PUT'])
+def decline_user(pid, uid, nid):
     try:
         db = current_app.config['db']
+
+        notification_ref = db.collection('notifications').document(nid)
+        notification_ref.delete()
 
         current_user = get_current_user()
         if not current_user or not current_user.get('is_admin', False):
@@ -399,6 +403,16 @@ def decline_user(pid, uid):
         project_ref.update({
             "unknown_members": firestore.ArrayRemove([uid])
         })
+
+        send_notification(
+            db,
+            "Project Membership Declined",
+            f"You have been declined to join the project '{project_doc.to_dict().get('title','')}'.",
+            "info", 
+            uid,
+            pid,
+            current_user.get('email', 'admin@email.com')
+        )
 
         return jsonify({'msg': 'Successfully declined the user for the project'}), 200
     except Exception as e:
@@ -418,7 +432,7 @@ def get_user_projects():
         author = author_ref.get().to_dict()
 
         author_email = author.get('email', '')
-        docs = project_ref.where('author_email', '==', author_email, ).where('is_approved', '==', True).stream()
+        docs = project_ref.where('author_email', '==', author_email, ).where('is_approved', '==', True).where('is_completed', '==', False).stream()
         projects = []
         for doc in docs:
             projects.append({"id": doc.id, **doc.to_dict()})
@@ -471,8 +485,8 @@ def request_completion(pid):
         return jsonify({'msg': 'Internal server error', 'error': str(e)}), 500
 
 
-@projects_bp.route('/projects/<pid>/approve-completion', methods=['PUT'])
-def approve_completion(pid):
+@projects_bp.route('/projects/<pid>/approve-completion/<nid>', methods=['PUT'])
+def approve_completion(pid, nid):
     try:
         db = current_app.config['db']
         user = get_current_user()
@@ -480,6 +494,7 @@ def approve_completion(pid):
             return jsonify({'msg': 'Unauthorized User'}), 401
 
         project_ref = db.collection('projects').document(pid)
+        notification_ref = db.collection('notifications').document(nid)
         doc = project_ref.get()
         if not doc.exists:
             return jsonify({'msg': 'Project not found'}), 404
@@ -493,6 +508,7 @@ def approve_completion(pid):
             "completion_requested": False,
             "completion_approval_date": datetime.datetime.now()
         })
+        notification_ref.delete()
 
         send_notification(
             db,
@@ -507,8 +523,8 @@ def approve_completion(pid):
     except Exception as e:
         return jsonify({'msg': 'Internal server error', 'error': str(e)}), 500
 
-@projects_bp.route('/projects/<pid>/decline-completion', methods=['PUT'])
-def decline_completion(pid):
+@projects_bp.route('/projects/<pid>/decline-completion/<nid>', methods=['PUT'])
+def decline_completion(pid, nid):
     try:
         db = current_app.config['db']
         user = get_current_user()
@@ -520,6 +536,7 @@ def decline_completion(pid):
             return jsonify({'msg': 'Missing decline reason'}), 400
 
         project_ref = db.collection('projects').document(pid)
+        notification_ref = db.collection('notifications').document(nid)
         doc = project_ref.get()
         if not doc.exists:
             return jsonify({'msg': 'Project not found'}), 404
@@ -532,6 +549,7 @@ def decline_completion(pid):
             "completion_requested": False,
             "completion_decline_reason": data["reason"]
         })
+        notification_ref.delete()
 
         send_notification(
             db,

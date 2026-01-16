@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { X, Loader, AlertTriangle } from "lucide-react"; // Import AlertTriangle
+import { X, Loader, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 
 // Define the structure of the props this component accepts
@@ -19,12 +19,10 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
   const [required_members, setRequiredMembers] = useState(1);
   const [committee, setCommittee] = useState("Any");
   const [project_timeframe, setProjectTimeframe] = useState("");
-  const [github, setGithubLink] = useState(""); // Renamed for consistency
+  const [github, setGithubLink] = useState("");
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // ✨ 1. Add state to control the confirmation dialog
   const [isConfirming, setIsConfirming] = useState(false);
 
   // Effect to reset the form when the modal is closed
@@ -39,27 +37,26 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
         setGithubLink("");
         setError(null);
         setIsSubmitting(false);
-        setIsConfirming(false); // Also reset confirmation state
-      }, 300); // Delay to allow for closing animation
+        setIsConfirming(false);
+      }, 300);
     }
   }, [isOpen]);
 
   if (!isOpen) return null;
 
-  // ✨ 2. The form's submit handler now just opens the confirmation dialog
+  // The form's submit handler now just opens the confirmation dialog
   const handleInitialSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Simple validation can be added here if needed before confirming
     if (!title || !description || !project_timeframe) {
       toast.warning("Please fill out all required fields.");
       return;
     }
-    setIsConfirming(true); // Open the confirmation dialog
+    setIsConfirming(true);
   };
 
-  // ✨ 3. This new function contains the actual API call logic
+  // This function contains the actual API call logic
   const handleFinalSubmit = async () => {
-    setIsConfirming(false); // Close confirmation dialog immediately
+    setIsConfirming(false);
     setIsSubmitting(true);
     setError(null);
 
@@ -69,7 +66,7 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
       required_members,
       project_timeframe,
       committee,
-      github, // Include github link in the submission
+      github,
     };
 
     try {
@@ -92,11 +89,12 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
       toast.success("Project submitted for approval!");
 
       setTimeout(() => {
-        onClose(); // Close the entire modal after a short delay
+        onClose();
       }, 1500);
-    } catch (err: any) {
-      toast.error(err.message);
-      setError(err.message);
+    } catch (err) {
+      const error = err as Error;
+      toast.error(error.message || "An error occurred");
+      setError(error.message || "An error occurred");
     } finally {
       setIsSubmitting(false);
     }
@@ -122,7 +120,6 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
           <X size={24} />
         </button>
 
-        {/* ✨ 4. The form now calls handleInitialSubmit */}
         <form onSubmit={handleInitialSubmit} className="space-y-4">
           <div>
             <label
@@ -140,6 +137,7 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
               className="w-full bg-[#0a1a33] border border-[#254b80] rounded-md p-2 focus:ring-2 focus:ring-[#9cc9ff] focus:outline-none"
             />
           </div>
+
           <div>
             <label
               htmlFor="description"
@@ -156,6 +154,7 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
               className="w-full bg-[#0a1a33] border border-[#254b80] rounded-md p-2 focus:ring-2 focus:ring-[#9cc9ff] focus:outline-none"
             />
           </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label
@@ -173,6 +172,7 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
                 className="w-full bg-[#0a1a33] border border-[#254b80] rounded-md p-2 focus:ring-2 focus:ring-[#9cc9ff] focus:outline-none"
               />
             </div>
+
             <div>
               <label
                 htmlFor="required_members"
@@ -193,6 +193,7 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
               />
             </div>
           </div>
+
           <div>
             <label
               htmlFor="committee"
@@ -213,6 +214,7 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
               <option>Coding</option>
             </select>
           </div>
+
           <div>
             <label
               htmlFor="github_link"
@@ -225,12 +227,15 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
               type="text"
               value={github}
               onChange={(e) => setGithubLink(e.target.value)}
+              placeholder="https://github.com/username/repo"
               className="w-full bg-[#0a1a33] border border-[#254b80] rounded-md p-2 focus:ring-2 focus:ring-[#9cc9ff] focus:outline-none"
             />
           </div>
+
           <div className="h-5 mt-2 text-center">
             {error && <p className="text-red-400 text-sm">{error}</p>}
           </div>
+
           <div className="flex justify-end gap-4 pt-4">
             <button
               type="button"
@@ -254,7 +259,7 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
           </div>
         </form>
 
-        {/* ✨ 5. The Confirmation Dialog Overlay */}
+        {/* Confirmation Dialog Overlay */}
         {isConfirming && (
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm z-20 flex items-center justify-center rounded-xl">
             <div className="bg-[#0f172a] p-8 rounded-lg shadow-xl text-center max-w-sm">
@@ -273,7 +278,7 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
                   type="button"
                   onClick={() => setIsConfirming(false)}
                   disabled={isSubmitting}
-                  className="px-6 py-2 rounded-lg text-gray-300 hover:bg-gray-600 transition disabled:opacity-50"
+                  className="px-6 py-2 rounded-lg bg-gray-700 text-gray-300 hover:bg-gray-600 transition disabled:opacity-50"
                 >
                   Go Back
                 </button>
@@ -281,7 +286,7 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
                   type="button"
                   onClick={handleFinalSubmit}
                   disabled={isSubmitting}
-                  className="px-6 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold transition disabled:opacity-50"
+                  className="px-6 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold transition disabled:opacity-50 flex items-center justify-center min-w-[100px]"
                 >
                   {isSubmitting ? (
                     <Loader className="animate-spin" size={20} />

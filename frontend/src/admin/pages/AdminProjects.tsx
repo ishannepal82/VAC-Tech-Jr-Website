@@ -148,7 +148,7 @@ export default function AdminProjects() {
     let success = false;
 
     // Include the updated members array in the payload
-    let payload = {
+    const payload = {
       ...editFormData,
       members: editFormData.members // This will update the backend members list
     };

@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 
-const Footer = ({onLinkClick}:any) => {
+const Footer = ({onLinkClick}: {onLinkClick?: () => void}) => {
   const linkClassName =
     "text-sm text-blue-100 hover:text-white transition-colors";
 

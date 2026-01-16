@@ -32,7 +32,8 @@ export function useCurrentUser() {
 
       const data = await res.json();
       setUser(data?.user_info ?? null);
-    } catch (error) {
+    } catch (e) {
+      console.error(e);
       setUser(null);
     } finally {
       setIsLoading(false);

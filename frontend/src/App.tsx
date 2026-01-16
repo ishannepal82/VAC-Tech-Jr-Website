@@ -25,7 +25,7 @@ import PreLoginLanding from "./pages/Landing";
 import Intruder from "./pages/intruder";
 import ErrorFallback from "./pages/ErrorFallback";
 import { Toaster } from "sonner";
-import { AdminDataProvider } from "./admin/context/AdminDataContext";
+import AdminDataProvider from "./admin/context/AdminDataProvider";
 
 const PublicLayout = () => (
   <>

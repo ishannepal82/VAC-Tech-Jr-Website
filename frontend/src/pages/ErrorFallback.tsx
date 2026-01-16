@@ -28,7 +28,7 @@ export default function ErrorFallback() {
           Go Back
         </button>
         <button
-          onClick={() => navigate("/")}
+          onClick={() => navigate("/home")}
           className="w-full rounded-xl border border-[#5ea4ff]/40 py-3 font-semibold text-[#5ea4ff] transition hover:bg-[#112a4f]"
         >
           Return Home

@@ -3,6 +3,7 @@ import { Image, Plus, Loader2, X, Upload, AlertCircle, ChevronLeft, ChevronRight
 import { toast } from "sonner";
 import TokenGate from "./TokenGate";
 
+// ==================== TYPE DEFINITIONS ====================
 type GalleryPost = {
   id: string;
   title: string;
@@ -11,6 +12,20 @@ type GalleryPost = {
   photos: string[];
 };
 
+type MemoryResponse = {
+  id: string;
+  title?: string;
+  author?: string;
+  created_at: string;
+  photos: string[];
+};
+
+type ApiError = {
+  message?: string;
+  msg?: string;
+};
+
+// ==================== MAIN COMPONENT ====================
 export default function GalleryPage(): React.ReactElement {
   const [memoTokens, setMemoTokens] = useState<number>(0);
   const [posts, setPosts] = useState<GalleryPost[]>([]);
@@ -43,7 +58,7 @@ export default function GalleryPage(): React.ReactElement {
         setMemoTokens(data.memo_tokens);
       }
 
-      const transformed: GalleryPost[] = (data.memories || []).map((m: any) => ({
+      const transformed: GalleryPost[] = (data.memories || []).map((m: MemoryResponse) => ({
         id: m.id,
         title: m.title || "Untitled Memory",
         author: m.author || "Anonymous",
@@ -139,8 +154,9 @@ export default function GalleryPage(): React.ReactElement {
       
       closeForm();
       setTimeout(fetchMemories, 800);
-    } catch (err: any) {
-      toast.error(err?.message || "Failed to create memory");
+    } catch (err) {
+      const error = err as ApiError;
+      toast.error(error?.message || "Failed to create memory");
     } finally {
       setIsLoading(false);
     }
@@ -276,6 +292,7 @@ export default function GalleryPage(): React.ReactElement {
   );
 }
 
+// ==================== GALLERY VIEWER MODAL ====================
 function GalleryViewerModal({
   post,
   onClose
@@ -451,6 +468,7 @@ function GalleryViewerModal({
   );
 }
 
+// ==================== FILE MEMORY FORM ====================
 function FileMemoryForm({
   onClose,
   onSubmit,

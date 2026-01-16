@@ -4,7 +4,7 @@ import type { RefAttributes } from "react";
 
 interface StatCardProps {
   title: string;
-  value: any;
+  value: React.ReactNode;
   icon: ForwardRefExoticComponent<
     Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>
   >;
