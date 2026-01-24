@@ -2,6 +2,7 @@ from flask import Blueprint, jsonify, request, current_app
 from firebase_admin import firestore
 from app.routes.utils.user_verifier_func import get_current_user
 from app.routes.utils.notification_sender import send_notification
+from app.routes.utils.points_updater import update_points
 import datetime
 import re
 
@@ -492,7 +493,9 @@ def approve_completion(pid, nid):
         user = get_current_user()
         if not user or not user.get('is_admin', False):
             return jsonify({'msg': 'Unauthorized User'}), 401
-
+        uid = user.get('uid')
+        user_ref = db.collection('Users').document(uid)
+        user_doc = user_ref.get().to_dict()
         project_ref = db.collection('projects').document(pid)
         notification_ref = db.collection('notifications').document(nid)
         doc = project_ref.get()
@@ -508,8 +511,11 @@ def approve_completion(pid, nid):
             "completion_requested": False,
             "completion_approval_date": datetime.datetime.now()
         })
-        notification_ref.delete()
 
+        points = project_data.get('points', 0)
+        members = project_data.get('members', [])
+        updated_points = update_points(points, members)
+        notification_ref.delete()
         send_notification(
             db,
             "Project Completion Approved",
@@ -518,7 +524,9 @@ def approve_completion(pid, nid):
             project_data['author_email'],
             pid
         )
-
+        user_ref.update({
+            "points": updated_points
+        })
         return jsonify({'msg': 'Successfully approved project completion'}), 200
     except Exception as e:
         return jsonify({'msg': 'Internal server error', 'error': str(e)}), 500

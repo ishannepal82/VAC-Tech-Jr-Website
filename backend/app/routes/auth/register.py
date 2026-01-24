@@ -33,7 +33,7 @@ def register_user():
             'email': email,
             'name': username,
             'role': 'member',
-            'rank': 'Hacker',
+            'rank': 'Newbie',
             'points': 0,
             "is_admin": False,
             'committee': 'Coding Club',

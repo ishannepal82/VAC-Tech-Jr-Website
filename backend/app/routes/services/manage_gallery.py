@@ -135,8 +135,11 @@ def create_memory():
         })
         memory_id = doc_ref[1].id
 
-        # Deduct 1 token (atomic)
-        user_ref.update({"memo_tokens": firestore.Increment(-1)})
+        # Deduct 1 token (atomic) and Increase the User Points
+        user_ref.update({
+            "points": 50,
+            "memo_tokens": firestore.Increment(-1)
+            })
 
         # Get updated memo tokens
         updated_user_doc = user_ref.get()
@@ -197,7 +200,7 @@ def get_all_memories():
                 except Exception:
                     d["created_at"] = datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S GMT")
             memories.append(d)
-
+        
         return jsonify({
             "msg": "Successfully fetched memories",
             "memories": memories,
